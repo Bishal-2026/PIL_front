@@ -1,0 +1,921 @@
+/* =====================================================
+   PREMIUM LOGIN PAGE — PIL InOut360
+   Covers both /login and /qrlogin pages
+   ===================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+/* ── Root Variables ── */
+:root {
+    --pil-navy: #0f2238;
+    --pil-mid: #1b3a5c;
+    --pil-accent: #2a6abf;
+    --pil-light: #4a9ded;
+    --pil-glow: rgba(42, 106, 191, 0.35);
+    --glass-bg: rgba(255, 255, 255, 0.07);
+    --glass-border: rgba(255, 255, 255, 0.18);
+    --text-white: #ffffff;
+    --text-muted-light: rgba(255, 255, 255, 0.62);
+    --error-color: #ff6b6b;
+    --success-color: #43e97b;
+    --radius-lg: 18px;
+    --radius-md: 12px;
+    --radius-sm: 8px;
+}
+
+/* ── Full-page wrapper ── */
+.pil-login-root {
+    height: 100vh;
+    height: 100dvh;
+    width: 100%;
+    display: flex;
+    align-items: stretch;
+    font-family: 'Inter', sans-serif;
+    overflow: hidden;
+    background: #f8fafc;
+    position: relative;
+}
+
+/* ── Animated gradient background ── */
+.pil-login-root::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+        radial-gradient(ellipse at 20% 50%, rgba(37, 99, 235, 0.04) 0%, transparent 55%),
+        radial-gradient(ellipse at 80% 20%, rgba(37, 99, 235, 0.02) 0%, transparent 55%),
+        radial-gradient(ellipse at 60% 80%, rgba(37, 99, 235, 0.05) 0%, transparent 50%),
+        linear-gradient(135deg, #ffffff 0%, #f1f5f9 50%, #e2e8f0 100%);
+    z-index: 0;
+    pointer-events: none;
+}
+
+@keyframes bgPulse {
+    0% {
+        opacity: 0.6;
+    }
+
+    100% {
+        opacity: 1;
+        transform: scale(1.02);
+    }
+}
+
+/* Floating orbs */
+.pil-login-root::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+        radial-gradient(circle 300px at 15% 70%, rgba(37, 99, 235, 0.03) 0%, transparent 70%),
+        radial-gradient(circle 200px at 85% 30%, rgba(37, 99, 235, 0.04) 0%, transparent 70%);
+    z-index: 0;
+    pointer-events: none;
+}
+
+/* ── Two-column layout ── */
+.pil-login-layout {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    width: 100%;
+    height: 100vh;
+    height: 100dvh;
+}
+
+/* ── LEFT PANEL — illustration side ── */
+.pil-login-left {
+    flex: 0 0 58%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px 40px;
+    position: relative;
+    overflow: hidden;
+}
+
+.pil-login-left::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.8) 0%, rgba(241, 245, 249, 0.8) 100%);
+    backdrop-filter: blur(10px);
+}
+
+/* decorative grid lines */
+.pil-login-left::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+        linear-gradient(rgba(37, 99, 235, 0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(37, 99, 235, 0.05) 1px, transparent 1px);
+    background-size: 50px 50px;
+    pointer-events: none;
+}
+
+.pil-left-content {
+    position: relative;
+    z-index: 2;
+    text-align: center;
+    max-width: 480px;
+}
+
+.pil-left-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: #dbeafe;
+    border: 1px solid #93c5fd;
+    border-radius: 100px;
+    padding: 6px 16px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #2563eb;
+    letter-spacing: 0.5px;
+    margin-bottom: 16px;
+    backdrop-filter: blur(8px);
+}
+
+.pil-left-badge span {
+    width: 6px;
+    height: 6px;
+    background: #43e97b;
+    border-radius: 50%;
+    display: inline-block;
+    box-shadow: 0 0 8px #43e97b;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    50% {
+        opacity: 0.6;
+        transform: scale(1.3);
+    }
+}
+
+.pil-left-illustration {
+    width: 100%;
+    max-width: 500px;
+    max-height: 45vh;
+    object-fit: contain;
+    filter: drop-shadow(0 24px 48px rgba(42, 106, 191, 0.35));
+    animation: floatImg 5s ease-in-out infinite;
+    border-radius: 16px;
+    margin-bottom: 20px;
+}
+
+@keyframes floatImg {
+
+    0%,
+    100% {
+        transform: translateY(0px);
+    }
+
+    50% {
+        transform: translateY(-14px);
+    }
+}
+
+.pil-left-headline {
+    font-size: 2.2rem;
+    font-weight: 700;
+    color: #0f172a;
+    line-height: 1.25;
+    margin-bottom: 14px;
+}
+
+.pil-left-headline span {
+    background: linear-gradient(90deg, #4a9ded, #89cfff);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.pil-left-sub {
+    font-size: 0.97rem;
+    color: #475569;
+    line-height: 1.7;
+    max-width: 360px;
+    margin: 0 auto;
+}
+
+/* stat pills */
+.pil-left-stats {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    margin-top: 24px;
+    flex-wrap: wrap;
+}
+
+.pil-stat {
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: var(--radius-md);
+    padding: 14px 22px;
+    text-align: center;
+    backdrop-filter: blur(6px);
+}
+
+.pil-stat-number {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #2563eb;
+}
+
+.pil-stat-label {
+    font-size: 0.75rem;
+    color: #475569;
+    margin-top: 3px;
+}
+
+/* ── RIGHT PANEL — form side ── */
+.pil-login-right {
+    flex: 0 0 42%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px 32px;
+    position: relative;
+}
+
+.pil-login-right::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(239, 246, 255, 0.6) 0%, rgba(219, 234, 254, 0.4) 100%);
+    border-left: 1px solid rgba(191, 219, 254, 0.5);
+    pointer-events: none;
+}
+
+/* ── Glass card ── */
+.pil-card {
+    position: relative;
+    z-index: 2;
+    width: 100%;
+    max-width: 520px;
+    min-height: 75vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 24px;
+    padding: 48px 48px;
+    box-shadow: 0 40px 100px -20px rgba(0, 0, 0, 0.05), 0 0 60px rgba(37, 99, 235, 0.15), 0 15px 30px -5px rgba(37, 99, 235, 0.1);
+    animation: cardEntrance 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes cardEntrance {
+    from {
+        opacity: 0;
+        transform: translateY(24px) scale(0.97);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* ── Logo area ── */
+.pil-card-logo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    margin-bottom: 20px;
+    width: 100%;
+}
+
+.pil-card-logo img {
+    width: 160px;
+    height: 70px;
+    object-fit: contain;
+    mix-blend-mode: multiply;
+    transition: transform 0.3s ease;
+}
+
+.pil-card-logo img:hover {
+    transform: scale(1.04);
+}
+
+/* ── Title area ── */
+.pil-card-title {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.pil-card-title h1 {
+    font-size: 1.65rem;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0 0 6px;
+    letter-spacing: -0.3px;
+}
+
+.pil-card-title p {
+    font-size: 0.875rem;
+    color: #64748b;
+    margin: 0;
+}
+
+/* ── Form fields ── */
+.pil-field-group {
+    margin-bottom: 14px;
+}
+
+.pil-field-label {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #64748b;
+    margin-bottom: 7px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+.pil-field-wrap {
+    position: relative;
+}
+
+.pil-field-wrap .pil-field-icon {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #94a3b8;
+    pointer-events: none;
+    display: flex;
+    align-items: center;
+}
+
+.pil-field-input {
+    width: 100%;
+    padding: 13px 14px 13px 42px;
+    background: #f8fafc;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 12px;
+    color: #334155;
+    font-size: 0.95rem;
+    font-family: 'Inter', sans-serif;
+    outline: none;
+    transition: border-color 0.25s, background 0.25s, box-shadow 0.25s;
+    box-sizing: border-box;
+}
+
+.pil-field-input::placeholder {
+    color: #94a3b8;
+}
+
+.pil-field-input:focus {
+    border-color: var(--pil-light);
+    background: #ffffff;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+.pil-field-input.pil-has-error {
+    border-color: var(--error-color) !important;
+    box-shadow: 0 0 0 3px rgba(255, 107, 107, 0.15) !important;
+}
+
+/* password toggle */
+.pil-pw-toggle {
+    position: absolute;
+    right: 13px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #94a3b8;
+    display: flex;
+    align-items: center;
+    padding: 4px;
+    border-radius: 6px;
+    transition: color 0.2s;
+}
+
+.pil-pw-toggle:hover {
+    color: #0f172a;
+}
+
+.pil-field-error {
+    font-size: 0.78rem;
+    color: var(--error-color);
+    margin-top: 5px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* ── Remember / Forgot row ── */
+.pil-row-rf {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 14px 0 20px;
+}
+
+.pil-remember {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 0.875rem;
+    color: #64748b;
+    user-select: none;
+}
+
+.pil-remember input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--pil-light);
+    cursor: pointer;
+}
+
+.pil-forgot {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #2563eb;
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+.pil-forgot:hover {
+    color: #b3e0ff;
+    text-decoration: underline;
+}
+
+/* ── Submit button ── */
+.pil-btn-submit {
+    width: 100%;
+    padding: 14px;
+    background: #2563eb;
+    border: none;
+    border-radius: 12px;
+    color: #ffffff;
+    font-size: 1rem;
+    font-weight: 700;
+    font-family: 'Inter', sans-serif;
+    letter-spacing: 0.3px;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.2s;
+    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3);
+}
+
+.pil-btn-submit:hover:not(:disabled) {
+    background: #1d4ed8;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4);
+}
+
+.pil-btn-submit:active:not(:disabled) {
+    transform: translateY(0);
+    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
+}
+
+.pil-btn-submit:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* loading spinner inside button */
+.pil-btn-spinner {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255, 255, 255, 0.4);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    vertical-align: middle;
+    margin-right: 8px;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* ── Divider ── */
+.pil-divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 16px 0;
+    color: #cbd5e1;
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 1px;
+}
+
+.pil-divider::before,
+.pil-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: #e2e8f0;
+}
+
+/* ── Register link ── */
+.pil-register-row {
+    text-align: center;
+    font-size: 0.875rem;
+    color: #64748b;
+    margin-top: 8px;
+}
+
+.pil-register-row a {
+    color: #2563eb;
+    font-weight: 600;
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+.pil-register-row a:hover {
+    color: #b3e0ff;
+}
+
+/* ── QR icon badge ── */
+.pil-qr-badge {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: var(--radius-md);
+    padding: 10px 16px;
+    margin-bottom: 28px;
+    color: #2563eb;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.pil-qr-badge svg {
+    flex-shrink: 0;
+}
+
+/* ── Full-page loader overlay ── */
+.pil-loader-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+}
+
+.pil-loader-ring {
+    width: 52px;
+    height: 52px;
+    border: 4px solid #e2e8f0;
+    border-top-color: #4a9ded;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+/* ── Responsive ── */
+@media (max-width: 900px) {
+    .pil-login-left {
+        display: none;
+    }
+
+    .pil-login-right {
+        flex: 1;
+        width: 100%;
+        min-width: unset;
+        padding: 16px;
+    }
+
+    .pil-card {
+        padding: 24px;
+        max-height: calc(100dvh - 32px);
+        overflow-y: auto;
+    }
+}
+
+@media (max-width: 480px),
+(max-height: 750px) {
+    .pil-login-right {
+        padding: 0;
+    }
+
+    .pil-card {
+        border-radius: 0;
+        border: none;
+        padding: 24px 20px;
+        max-height: unset;
+        min-height: 100dvh;
+        width: 100%;
+        max-width: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        background: #ffffff;
+        /* slightly adjusted for full screen readability */
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+    }
+
+    .pil-card-logo {
+        margin-bottom: 24px;
+    }
+
+    .pil-card-logo img {
+        height: 60px;
+    }
+
+    .pil-card-title {
+        margin-bottom: 24px;
+    }
+
+    .pil-card-title h1 {
+        font-size: 1.5rem;
+        margin-bottom: 6px;
+    }
+
+    .pil-field-group {
+        margin-bottom: 16px;
+    }
+
+    .pil-field-input {
+        padding: 12px 14px 12px 40px;
+        font-size: 1rem;
+    }
+
+    .pil-row-rf {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+        margin: 14px 0 20px;
+        font-size: 0.85rem;
+    }
+
+    .pil-btn-submit {
+        padding: 14px;
+        font-size: 1rem;
+    }
+
+    .pil-divider {
+        margin: 16px 0;
+    }
+
+    .pil-qr-badge {
+        margin-bottom: 20px;
+    }
+}
+
+/* =====================================================
+   AUTH PAGES — Forgot Password / OTP / Reset Password
+   Centered single-card layout, same dark theme
+   ===================================================== */
+
+.pil-auth-page {
+    min-height: 100vh;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Inter', sans-serif;
+    background: #f8fafc;
+    position: relative;
+    overflow: hidden;
+}
+
+.pil-auth-bg {
+    position: fixed;
+    inset: 0;
+    background:
+        radial-gradient(ellipse at 20% 50%, rgba(37, 99, 235, 0.04) 0%, transparent 55%),
+        radial-gradient(ellipse at 80% 20%, rgba(37, 99, 235, 0.02) 0%, transparent 55%),
+        radial-gradient(ellipse at 60% 80%, rgba(37, 99, 235, 0.05) 0%, transparent 50%),
+        linear-gradient(135deg, #f8fafc 0%, #f1f5f9 50%, #e2e8f0 100%);
+    z-index: 0;
+    /* subtle grid */
+    background-image:
+        radial-gradient(ellipse at 20% 50%, rgba(37, 99, 235, 0.04) 0%, transparent 55%),
+        radial-gradient(ellipse at 80% 20%, rgba(37, 99, 235, 0.02) 0%, transparent 55%),
+        radial-gradient(ellipse at 60% 80%, rgba(37, 99, 235, 0.05) 0%, transparent 50%),
+        linear-gradient(135deg, #f8fafc 0%, #f1f5f9 50%, #e2e8f0 100%);
+}
+
+.pil-auth-container {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    max-width: 480px;
+    padding: 32px 20px;
+}
+
+/* Logo above card */
+.pil-auth-logo {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 24px;
+}
+
+.pil-auth-logo img {
+    width: 130px;
+    height: auto;
+    mix-blend-mode: multiply;
+}
+
+/* Main glass card */
+.pil-auth-card {
+    width: 100%;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 24px;
+    padding: 48px 40px;
+    backdrop-filter: blur(32px);
+    -webkit-backdrop-filter: blur(32px);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+    animation: cardEntrance 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+    text-align: center;
+}
+
+/* Circular icon badge at top */
+.pil-auth-icon-wrap {
+    width: 64px;
+    height: 64px;
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.05), rgba(74, 157, 237, 0.2));
+    border: 1px solid rgba(74, 157, 237, 0.35);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 24px;
+    color: #2563eb;
+    box-shadow: 0 0 20px rgba(74, 157, 237, 0.2);
+}
+
+.pil-auth-title {
+    font-size: 1.7rem;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0 0 10px;
+    letter-spacing: -0.3px;
+}
+
+.pil-auth-subtitle {
+    font-size: 0.9rem;
+    color: #64748b;
+    margin: 0 0 30px;
+    line-height: 1.6;
+}
+
+/* text-align left for form fields inside centered card */
+.pil-auth-card .pil-field-group {
+    text-align: left;
+}
+
+.pil-auth-card form {
+    margin-top: 8px;
+}
+
+/* OTP input — bigger, centred characters */
+.pil-otp-input {
+    text-align: center;
+    font-size: 1.4rem !important;
+    letter-spacing: 0.5rem !important;
+    font-weight: 600 !important;
+}
+
+/* Back link */
+.pil-auth-back-link {
+    margin-top: 22px;
+    font-size: 0.875rem;
+}
+
+.pil-auth-back-link a {
+    color: #2563eb;
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.2s;
+}
+
+.pil-auth-back-link a:hover {
+    color: #b3e0ff;
+}
+
+/* Info / error message below form */
+.pil-auth-message {
+    margin-top: 16px;
+    font-size: 0.875rem;
+    color: var(--error-color);
+    background: #fef2f2;
+    border: 1px solid rgba(255, 107, 107, 0.25);
+    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+    text-align: left;
+}
+
+/* Footer */
+.pil-auth-footer {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 24px;
+    font-size: 0.78rem;
+    color: #cbd5e1;
+}
+
+/* Responsive */
+@media (max-width: 520px) {
+    .pil-auth-card {
+        padding: 32px 22px;
+    }
+
+    .pil-auth-title {
+        font-size: 1.4rem;
+    }
+}
+
+/* ── App Mode Adjustments ── */
+.pil-login-root.is-app-mode .pil-login-right {
+    flex: 1;
+    width: 100%;
+}
+
+.pil-login-root.is-app-mode .pil-card {
+    max-width: 480px;
+    margin: 0 auto;
+}
+
+/* Custom Address Suggestions Styling (Free Replacement) */
+.pil-custom-suggestions {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    margin-top: 8px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    z-index: 9999 !important; /* Force on top of scrollable container */
+    max-height: 250px;
+    overflow-y: auto;
+    animation: pilFadeIn 0.2s ease-out;
+}
+
+@keyframes pilFadeIn {
+    from { opacity: 0; transform: translateY(-5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.pil-suggestion-item {
+    padding: 10px 14px;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.pil-suggestion-icon {
+    margin-top: 2px;
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    background: #eff6ff;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.pil-suggestion-item:last-child {
+    border-bottom: none;
+}
+
+.pil-suggestion-item:hover {
+    background: #f8fafc;
+    color: #2563eb;
+}
+
+.pil-suggestion-item span {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
