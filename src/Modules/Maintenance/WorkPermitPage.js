@@ -57,6 +57,11 @@ const WorkPermitPage = () => {
     lockOutTagOut: false,
     scaffoldingReady: false
   });
+  const [activeStep, setActiveStep] = useState(1);
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [activeChatId, setActiveChatId] = useState(null);
+  const [chatMessages, setChatMessages] = useState([]);
+  const [typingMessage, setTypingMessage] = useState("");
   const [errors, setErrors] = useState({});
   const [permits, setPermits] = useState(INITIAL_PERMITS);
 
@@ -64,15 +69,18 @@ const WorkPermitPage = () => {
   const [statusFilter, setStatusFilter] = useState("All");
   const [typeFilter, setTypeFilter] = useState("All");
 
-  const [expandedSections, setExpandedSections] = useState([1]); // Default section 1 open
-
   const toggleSection = (id) => {
-    if (expandedSections.includes(id)) {
-      setExpandedSections(expandedSections.filter(x => x !== id));
-    } else {
-      setExpandedSections([...expandedSections, id]);
-    }
+    setActiveStep(id);
   };
+
+  const steps = [
+    { id: 1, label: "Basic Details", icon: "article" },
+    { id: 2, label: "Location", icon: "pin_drop" },
+    { id: 3, label: "Crew", icon: "engineering" },
+    { id: 4, label: "Safety", icon: "security" },
+    { id: 5, label: "Checklist", icon: "verified_user" },
+    { id: 6, label: "Approval", icon: "assignment_turned_in" },
+  ];
 
   // Filtered Permits
   const filteredPermits = useMemo(() => {
@@ -278,257 +286,275 @@ const WorkPermitPage = () => {
 
         {activeTab === "request" ? (
           <form onSubmit={handleSubmit}>
-            {/* 📝 Section 1: Basic Job Details */}
-            <div className={`wp-collapsible-card ${expandedSections.includes(1) ? 'expanded' : ''}`}>
-               <div className="wp-section-header-clickable" onClick={() => toggleSection(1)}>
-                  <div className="wp-section-title sm">
-                     <div className="wp-section-icon sm"><span className="material-symbols-rounded">article</span></div>
-                     <span>1. Basic Job Details</span>
+            {/* 🏗️ Modern Stepper Row */}
+            <div className="wp-stepper-row">
+               {steps.map(s => (
+                  <div key={s.id} className={`wp-step-item ${activeStep === s.id ? 'active' : ''} ${activeStep > s.id ? 'completed' : ''}`} onClick={() => setActiveStep(s.id)}>
+                     <div className="wp-step-icon">
+                        <span className="material-symbols-rounded">{activeStep > s.id ? 'check' : s.icon}</span>
+                     </div>
+                     <span className="wp-step-label">{s.label}</span>
+                     <div className="wp-step-line"></div>
                   </div>
-                  <span className="material-symbols-rounded wp-collapse-icon">expand_more</span>
-               </div>
-               <div className="wp-section-content">
-                  <div className="wp-grid sm">
-                     <div className="wp-form-group">
-                       <label>Work Title / Subject</label>
-                       <input name="title" value={form.title} onChange={handleInputChange} placeholder="E.g. Crane Refurbishment..." />
-                     </div>
-                     <div className="wp-form-group">
-                       <label>Classification</label>
-                       <select name="type" value={form.type} onChange={handleInputChange}>
-                          <option value="Hot Work">Hot Work (Flame/Spark)</option>
-                          <option value="Cold Work">Cold Work (General)</option>
-                          <option value="Confined Space">Confined Space Entry</option>
-                          <option value="Height Work">Height / Elevated Work</option>
-                       </select>
-                     </div>
-                     <div className="wp-form-group wp-full">
-                       <label>Detailed Scope of Work</label>
-                       <textarea rows="2" name="description" value={form.description} onChange={handleInputChange} placeholder="Describe the methodology..." />
-                     </div>
-                  </div>
-               </div>
+               ))}
             </div>
 
-            {/* 📍 Section 2 & 3: Location & Schedule */}
-            <div className={`wp-collapsible-card ${expandedSections.includes(2) ? 'expanded' : ''}`}>
-               <div className="wp-section-header-clickable" onClick={() => toggleSection(2)}>
-                  <div className="wp-section-title sm">
-                     <div className="wp-section-icon sm"><span className="material-symbols-rounded">pin_drop</span></div>
-                     <span>2. Location & Schedule</span>
-                  </div>
-                  <span className="material-symbols-rounded wp-collapse-icon">expand_more</span>
-               </div>
-               <div className="wp-section-content">
-                  <div className="wp-form-row">
-                     <div className="wp-flex-1">
-                        <div className="wp-grid sm">
-                           <div className="wp-form-group"><label>Plant</label><input name="plant" value={form.plant} onChange={handleInputChange} /></div>
-                           <div className="wp-form-group"><label>Area</label><input name="area" value={form.area} onChange={handleInputChange} /></div>
-                           <div className="wp-form-group wp-full"><label>Exact Location</label><input name="exactLocation" value={form.exactLocation} onChange={handleInputChange} /></div>
-                        </div>
-                     </div>
-                     <div className="wp-flex-1">
-                        <div className="wp-grid sm">
-                           <div className="wp-form-group">
-                             <label>Start Window</label>
-                             <input type="datetime-local" name="startTime" value={form.startTime} onChange={handleInputChange} />
+            <div className="wp-active-section-container">
+              {/* 📝 Step 1: Basic Job Details */}
+              {activeStep === 1 && (
+                <div className="wp-section-fade-in wp-section-modern">
+                   <div className="wp-section-header-simple">
+                      <h2><span className="material-symbols-rounded">article</span> 1. Basic Job Details</h2>
+                      <p>Define the scope and classification of the work permit.</p>
+                   </div>
+                   <div className="wp-grid">
+                      <div className="wp-form-group wp-full">
+                        <label>Work Title / Subject</label>
+                        <input name="title" value={form.title} onChange={handleInputChange} placeholder="E.g. Boiler Area Maintenance..." autoFocus />
+                      </div>
+                      <div className="wp-form-group">
+                        <label>Classification</label>
+                        <select name="workType" value={form.workType} onChange={handleInputChange}>
+                           {WORK_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                        </select>
+                      </div>
+                      <div className="wp-form-group">
+                        <label>Risk Level</label>
+                        <select name="riskLevel" value={form.riskLevel} onChange={handleInputChange}>
+                           <option value="Low">Low Risk</option>
+                           <option value="Medium">Medium Risk</option>
+                           <option value="High">High Risk</option>
+                        </select>
+                      </div>
+                      <div className="wp-form-group wp-full">
+                        <label>Detailed Methodology / Scope of Work</label>
+                        <textarea rows="4" name="description" value={form.description} onChange={handleInputChange} placeholder="Describe the step-by-step methodology..." />
+                      </div>
+                   </div>
+                </div>
+              )}
+  
+              {/* 📍 Step 2: Location & Schedule */}
+              {activeStep === 2 && (
+                <div className="wp-section-fade-in wp-section-modern">
+                   <div className="wp-section-header-simple">
+                      <h2><span className="material-symbols-rounded">pin_drop</span> 2. Location & Schedule</h2>
+                      <p>Where and when will this work occur?</p>
+                   </div>
+                   <div className="wp-grid">
+                      <div className="wp-form-group"><label>Plant / Unit</label><input name="plant" value={form.plant} onChange={handleInputChange} placeholder="E.g. Unit 4 Refinery" /></div>
+                      <div className="wp-form-group"><label>Department Area</label><input name="area" value={form.area} onChange={handleInputChange} placeholder="E.g. Zone B" /></div>
+                      <div className="wp-form-group wp-full"><label>Exact Location Point</label><input name="exactLocation" value={form.exactLocation} onChange={handleInputChange} placeholder="E.g. Boiler #4, 2nd Floor Floor Mezzanine" /></div>
+                      
+                      <div className="wp-form-group">
+                        <label>Start Window (Permit From)</label>
+                        <input type="datetime-local" name="startTime" value={form.startTime} onChange={handleInputChange} />
+                      </div>
+                      <div className="wp-form-group">
+                        <label>Expiry Window (Permit Until)</label>
+                        <input type="datetime-local" name="endTime" value={form.endTime} onChange={handleInputChange} />
+                      </div>
+                      
+                      <div className="wp-form-group wp-full">
+                        <label>Calculated Active Duration</label>
+                        <div className="wp-duration-card">
+                           <span className="material-symbols-rounded">schedule</span>
+                           <div>
+                              <strong>{duration === "Invalid" ? "Set Valid Range" : duration}</strong>
+                              <span>Total active work time on-site</span>
                            </div>
-                           <div className="wp-form-group">
-                             <label>Expiry Window </label>
-                             <input type="datetime-local" name="endTime" value={form.endTime} onChange={handleInputChange} />
-                           </div>
                         </div>
-                        <div className="wp-form-group" style={{ marginTop: 16 }}>
-                          <label>Calculated Active Duration</label>
-                          <div className="wp-duration-pill sm">
-                            <span className="material-symbols-rounded">timer</span>
-                            <span>{duration === "Invalid" ? "Set Valid Range" : duration}</span>
+                      </div>
+                   </div>
+                </div>
+              )}
+  
+              {/* 👤 Step 3: Technical Crew */}
+              {activeStep === 3 && (
+                <div className="wp-section-fade-in wp-section-modern">
+                   <div className="wp-section-header-simple">
+                      <h2><span className="material-symbols-rounded">engineering</span> 3. Technical Crew</h2>
+                      <p>Register all personnel involved in the task.</p>
+                   </div>
+                   <div className="wp-crew-grid">
+                      {workers.map((w, i) => (
+                        <div key={i} className="wp-simple-worker-card">
+                          <div className="wp-worker-avatar-lite">
+                             {w.image ? <img src={URL.createObjectURL(w.image)} alt="Avatar" /> : <span className="material-symbols-rounded">person</span>}
+                             <input type="file" accept="image/*" onChange={(e) => {
+                                const nw = [...workers]; nw[i].image = e.target.files[0]; setWorkers(nw);
+                             }} />
                           </div>
+                          <div className="wp-worker-info-lite">
+                             <input value={w.name} onChange={(e) => {
+                                const nw = [...workers]; nw[i].name = e.target.value; setWorkers(nw);
+                             }} placeholder="Full Name" />
+                             <input value={w.id} onChange={(e) => {
+                                const nw = [...workers]; nw[i].id = e.target.value; setWorkers(nw);
+                             }} placeholder="EMP-####" />
+                          </div>
+                          {workers.length > 1 && (
+                            <button type="button" className="wp-remove-worker-btn" onClick={() => setWorkers(workers.filter((_, idx) => idx !== i))}>
+                               <span className="material-symbols-rounded">delete_outline</span>
+                            </button>
+                          )}
                         </div>
-                     </div>
-                  </div>
-               </div>
-            </div>
-
-            {/* 👤 Section 4: People */}
-            <div className={`wp-collapsible-card ${expandedSections.includes(3) ? 'expanded' : ''}`}>
-               <div className="wp-section-header-clickable" onClick={() => toggleSection(3)}>
-                  <div className="wp-section-title sm">
-                     <div className="wp-section-icon sm"><span className="material-symbols-rounded">engineering</span></div>
-                     <span>3. Technical Crew</span>
-                  </div>
-                  <span className="material-symbols-rounded wp-collapse-icon">expand_more</span>
-               </div>
-               <div className="wp-section-content">
-                  {workers.map((w, i) => (
-                    <div key={i} className="wp-worker-card">
-                      <div className="wp-worker-avatar-upload">
-                         <div className="wp-worker-avatar">
-                            {w.image ? <img src={URL.createObjectURL(w.image)} alt="Avatar" /> : <span className="material-symbols-rounded">person</span>}
+                      ))}
+                   </div>
+                   <button type="button" className="wp-add-member-btn" onClick={() => setWorkers([...workers, { name: "", id: "", image: null }])}>
+                      <span className="material-symbols-rounded">person_add</span> Add Another Team Member
+                   </button>
+                </div>
+              )}
+  
+              {/* ⚠️ Step 4: Hazard & PPE */}
+              {activeStep === 4 && (
+                <div className="wp-section-fade-in wp-section-modern">
+                   <div className="wp-section-header-simple">
+                      <h2><span className="material-symbols-rounded">security</span> 4. Hazard Analysis & PPE</h2>
+                      <p>Identify risks and required protective equipment.</p>
+                   </div>
+                   <div className="wp-risk-section">
+                       <label className="wp-sub-label">Incident & Hazard Identification</label>
+                       <div className="wp-hazard-selection-grid">
+                         {HAZARDS.map(h => (
+                           <div key={h.id} className={`wp-hazard-chip ${hazards.includes(h.id) ? 'active' : ''}`} onClick={() => {
+                             setHazards(hazards.includes(h.id) ? hazards.filter(x => x !== h.id) : [...hazards, h.id]);
+                           }}>
+                             <span className="material-symbols-rounded">{h.icon}</span>
+                             <span>{h.label}</span>
+                             {hazards.includes(h.id) && <span className="material-symbols-rounded chip-check">check_circle</span>}
+                           </div>
+                         ))}
+                       </div>
+  
+                       <label className="wp-sub-label" style={{ marginTop: 32 }}>Required PPE Selection</label>
+                       <div className="wp-ppe-selection-grid">
+                         {PPE_LIST.map(p => (
+                           <button type="button" key={p} className={`wp-ppe-chip ${ppe.includes(p) ? 'active' : ''}`} onClick={() => {
+                             setPpe(ppe.includes(p) ? ppe.filter(x => x !== p) : [...ppe, p]);
+                           }}>
+                             {p}
+                             {ppe.includes(p) && <span className="material-symbols-rounded">check</span>}
+                           </button>
+                         ))}
+                       </div>
+                   </div>
+                </div>
+              )}
+  
+              {/* 🛡️ Step 5: Checklist & Emergency */}
+              {activeStep === 5 && (
+                <div className="wp-section-fade-in wp-section-modern">
+                   <div className="wp-section-header-simple">
+                      <h2><span className="material-symbols-rounded">verified_user</span> 5. Safety Checklist & Emergency</h2>
+                      <p>Final safety verification and response details.</p>
+                   </div>
+                   <div className="wp-grid">
+                      <div className="wp-form-group wp-full">
+                         <label>Safety Readiness Checklist</label>
+                         <div className="wp-checklist-grid">
+                            {Object.keys(safetyChecks).map(key => (
+                              <div key={key} className={`wp-check-row ${safetyChecks[key] ? 'checked' : ''}`} onClick={() => setSafetyChecks(prev => ({...prev, [key]: !prev[key]}))}>
+                                 <span className="material-symbols-rounded">{safetyChecks[key] ? 'check_circle' : 'circle'}</span>
+                                 <span>{key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}</span>
+                              </div>
+                            ))}
                          </div>
-                         <input type="file" accept="image/*" className="wp-avatar-input" onChange={(e) => {
-                            const nw = [...workers]; nw[i].image = e.target.files[0]; setWorkers(nw);
-                         }} />
-                         <div className="wp-avatar-overlay"><span className="material-symbols-rounded">photo_camera</span></div>
                       </div>
+  
                       <div className="wp-form-group">
-                         <label>Tech Full Name</label>
-                         <input value={w.name} onChange={(e) => {
-                            const nw = [...workers]; nw[i].name = e.target.value; setWorkers(nw);
-                         }} placeholder="User Name" />
-                      </div>
-                      <div className="wp-form-group">
-                         <label>Employee ID</label>
-                         <input value={w.id} onChange={(e) => {
-                            const nw = [...workers]; nw[i].id = e.target.value; setWorkers(nw);
-                         }} placeholder="EMP-####" />
-                      </div>
-                      {workers.length > 1 && (
-                        <button type="button" className="wp-remove-btn" onClick={() => setWorkers(workers.filter((_, idx) => idx !== i))}>
-                           <span className="material-symbols-rounded">close</span>
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                  <button type="button" className="wp-autofill-btn" onClick={() => setWorkers([...workers, { name: "", id: "", image: null }])} style={{ width: '100%', marginTop: 12, justifyContent: 'center' }}>
-                     <span className="material-symbols-rounded">person_add</span> Add New Crew Member
-                  </button>
-               </div>
-            </div>
-
-            {/* ⚠️ Section 5 & 6: Risk & PPE */}
-            <div className={`wp-collapsible-card ${expandedSections.includes(4) ? 'expanded' : ''}`}>
-               <div className="wp-section-header-clickable" onClick={() => toggleSection(4)}>
-                  <div className="wp-section-title sm">
-                     <div className="wp-section-icon sm"><span className="material-symbols-rounded">security</span></div>
-                     <span>4. Hazard & Safety Gear</span>
-                  </div>
-                  <span className="material-symbols-rounded wp-collapse-icon">expand_more</span>
-               </div>
-               <div className="wp-section-content">
-                  <div className="wp-form-row">
-                     <div className="wp-flex-1">
-                        <label className="wp-inner-label">Hazard Analysis</label>
-                        <div className="wp-check-grid dense">
-                          {HAZARDS.map(h => (
-                            <div key={h.id} className={`wp-check-item sm ${hazards.includes(h.id) ? 'active' : ''}`} onClick={() => {
-                              setHazards(hazards.includes(h.id) ? hazards.filter(x => x !== h.id) : [...hazards, h.id]);
-                            }}>
-                              <span className="material-symbols-rounded">{h.icon}</span>
-                              <span className="wp-check-label">{h.label}</span>
-                              {hazards.includes(h.id) && <span className="material-symbols-rounded" style={{ marginLeft: 'auto', fontSize: '18px' }}>check_circle</span>}
-                            </div>
-                          ))}
-                        </div>
-                        <div className="wp-form-group" style={{ marginTop: 20 }}>
-                          <label>Risk Level</label>
-                          <select name="riskLevel" value={form.riskLevel} onChange={handleInputChange}>
-                             <option value="Low">Low Risk</option>
-                             <option value="Medium">Medium Risk</option>
-                             <option value="High">High Risk</option>
-                          </select>
-                        </div>
-                     </div>
-                     <div className="wp-flex-1">
-                        <label className="wp-inner-label">Safety Gear (PPE)</label>
-                        <div className="wp-check-grid dense">
-                          {PPE_LIST.map(p => (
-                            <div key={p} className={`wp-check-item sm ${ppe.includes(p) ? 'active' : ''}`} onClick={() => {
-                              setPpe(ppe.includes(p) ? ppe.filter(x => x !== p) : [...ppe, p]);
-                            }}>
-                              <span className="wp-check-label">{p}</span>
-                              {ppe.includes(p) && <span className="material-symbols-rounded" style={{ marginLeft: 'auto', fontSize: '18px' }}>check_circle</span>}
-                            </div>
-                          ))}
-                        </div>
-                     </div>
-                  </div>
-               </div>
-            </div>
-
-            {/* 🛡️ Section 7, 8 & 9 Combined */}
-            <div className={`wp-collapsible-card ${expandedSections.includes(5) ? 'expanded' : ''}`}>
-               <div className="wp-section-header-clickable" onClick={() => toggleSection(5)}>
-                  <div className="wp-section-title sm">
-                     <div className="wp-section-icon sm"><span className="material-symbols-rounded">verified_user</span></div>
-                     <span>5. Safety Check & Emergency</span>
-                  </div>
-                  <span className="material-symbols-rounded wp-collapse-icon">expand_more</span>
-               </div>
-               <div className="wp-section-content">
-                  <div className="wp-form-row">
-                     <div className="wp-flex-2">
-                        <label className="wp-inner-label">Safety Checklist</label>
-                        <div className="wp-safety-checklist dense">
-                           {Object.keys(safetyChecks).map(key => (
-                             <div key={key} className={`wp-safety-item ${safetyChecks[key] ? 'checked' : ''}`} onClick={() => setSafetyChecks(prev => ({...prev, [key]: !prev[key]}))}>
-                                <span className="material-symbols-rounded">{safetyChecks[key] ? 'check_box' : 'check_box_outline_blank'}</span>
-                                <span>{key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}</span>
-                             </div>
-                           ))}
-                        </div>
-                        <div className="wp-form-group" style={{ marginTop: 16 }}>
-                          <label>Supporting Documents</label>
-                          <input type="file" style={{ display: 'none' }} ref={fileInputRef} onChange={(e) => alert(`Files attached: ${e.target.files.length}`)} />
-                          <div className="wp-upload-zone sm" onClick={() => fileInputRef.current?.click()} style={{ cursor: 'pointer' }}>
-                            <span className="material-symbols-rounded">cloud_upload</span>
-                            <span>Drop Photos (Max 5MB) or Click to Browse</span>
-                          </div>
-                        </div>
-                     </div>
-                     <div className="wp-flex-1">
-                        <label className="wp-inner-label">Emergency Info</label>
-                        <div className="wp-emergency-info dense">
-                           <div className="wp-emergency-row sm">
-                              <span className="material-symbols-rounded">call</span>
-                              <p>{form.emergencyContact}</p>
-                           </div>
-                           <div className="wp-emergency-row sm">
-                              <span className="material-symbols-rounded">medical_information</span>
-                              <p>{form.emergencyPoint}</p>
+                        <label>Supporting Certificates (Image/PDF)</label>
+                        <div className="wp-modern-upload-box" onClick={() => fileInputRef.current?.click()}>
+                           <input type="file" style={{ display: 'none' }} ref={fileInputRef} multiple />
+                           <span className="material-symbols-rounded">cloud_upload</span>
+                           <div>
+                              <strong>Upload Documentation</strong>
+                              <span>Max 10MB per file</span>
                            </div>
                         </div>
-                     </div>
-                  </div>
-               </div>
-            </div>
+                      </div>
+  
+                      <div className="wp-form-group wp-full">
+                         <label>Emergency Action Details (Editable)</label>
+                         <div className="wp-grid sm">
+                            <div className="wp-form-group">
+                               <label><span className="material-symbols-rounded">call</span> SOS line</label>
+                               <input 
+                                  name="emergencyContact" 
+                                  value={form.emergencyContact} 
+                                  onChange={handleInputChange} 
+                                  placeholder="+91 00000-00000"
+                                  className="wp-emergency-input"
+                               />
+                            </div>
+                            <div className="wp-form-group">
+                               <label><span className="material-symbols-rounded">medical_services</span> First Aid Point</label>
+                               <input 
+                                  name="emergencyPoint" 
+                                  value={form.emergencyPoint} 
+                                  onChange={handleInputChange} 
+                                  placeholder="e.g. Area B Station"
+                                  className="wp-emergency-input"
+                               />
+                            </div>
+                         </div>
+                      </div>
+                   </div>
+                </div>
+              )}
+  
+              {/* ✅ Step 6: Approval Workflow */}
+              {activeStep === 6 && (
+                <div className="wp-section-fade-in wp-section-modern">
+                   <div className="wp-section-header-simple">
+                      <h2><span className="material-symbols-rounded">assignment_turned_in</span> 6. Approval Workflow</h2>
+                      <p>Finalize the permit and send for authorization.</p>
+                   </div>
+                   <div className="wp-grid">
+                      <div className="wp-form-group">
+                         <label>Line Supervisor (Issuer)</label>
+                         <select name="supervisor" value={form.supervisor} onChange={handleInputChange}>
+                            {SUPERVISORS.map(s => <option key={s} value={s}>{s}</option>)}
+                         </select>
+                      </div>
+                      <div className="wp-form-group">
+                         <label>Safety Officer (HSSE)</label>
+                         <select name="safetyOfficer" value={form.safetyOfficer} onChange={handleInputChange}>
+                            {SAFETY_OFFICERS.map(s => <option key={s} value={s}>{s}</option>)}
+                         </select>
+                      </div>
+                      <div className="wp-form-group">
+                         <label>Authorized Emergency Contact</label>
+                         <input name="emergencyContact" value={form.emergencyContact} onChange={handleInputChange} />
+                      </div>
+                      <div className="wp-form-group">
+                         <label>Nearest Safety Station</label>
+                         <input name="emergencyPoint" value={form.emergencyPoint} onChange={handleInputChange} />
+                      </div>
+                   </div>
+                   <div className="wp-declaration-box">
+                      <span className="material-symbols-rounded">info</span>
+                      <p>By submitting this permit, I confirm that all safety protocols have been reviewed and necessary precautions are in place as per company policy.</p>
+                   </div>
+                </div>
+              )}
 
-            {/* ✅ Section 10: Approval Workflow */}
-            <div className={`wp-collapsible-card ${expandedSections.includes(6) ? 'expanded' : ''}`}>
-               <div className="wp-section-header-clickable" onClick={() => toggleSection(6)}>
-                  <div className="wp-section-title sm">
-                     <div className="wp-section-icon sm"><span className="material-symbols-rounded">assignment_turned_in</span></div>
-                     <span>6. Approval Workflow</span>
-                  </div>
-                  <span className="material-symbols-rounded wp-collapse-icon">expand_more</span>
-               </div>
-               <div className="wp-section-content">
-                  <div className="wp-grid">
-                     <div className="wp-form-group">
-                        <label>Select Line Supervisor</label>
-                        <select name="supervisor" value={form.supervisor} onChange={handleInputChange}>
-                           {SUPERVISORS.map(s => <option key={s} value={s}>{s}</option>)}
-                        </select>
-                     </div>
-                     <div className="wp-form-group">
-                        <label>Select Safety Officer</label>
-                        <select name="safetyOfficer" value={form.safetyOfficer} onChange={handleInputChange}>
-                           {SAFETY_OFFICERS.map(s => <option key={s} value={s}>{s}</option>)}
-                        </select>
-                     </div>
-                  </div>
-                  <div className="wp-grid" style={{ marginTop: 24 }}>
-                     <div className="wp-form-group">
-                        <label>Authorized SOS Contact</label>
-                        <input name="emergencyContact" value={form.emergencyContact} onChange={handleInputChange} placeholder="E.g. +91 99887-76655" />
-                     </div>
-                     <div className="wp-form-group">
-                        <label>Nearest Safety Station / Point</label>
-                        <input name="emergencyPoint" value={form.emergencyPoint} onChange={handleInputChange} placeholder="E.g. Safety Pillar #04" />
-                     </div>
-                  </div>
-               </div>
+              {/* 🧙 Navigation Controls */}
+              <div className="wp-wizard-nav">
+                 <button type="button" className="wp-nav-btn wp-prev" disabled={activeStep === 1} onClick={() => setActiveStep(activeStep - 1)}>
+                    <span className="material-symbols-rounded">arrow_back</span> Previous
+                 </button>
+                 {activeStep < 6 ? (
+                   <button type="button" className="wp-nav-btn wp-next" onClick={() => setActiveStep(activeStep + 1)}>
+                      Next Step <span className="material-symbols-rounded">arrow_forward</span>
+                   </button>
+                 ) : (
+                   <button type="submit" className="wp-nav-btn wp-submit">
+                      Submit for Final Approval <span className="material-symbols-rounded">send</span>
+                   </button>
+                 )}
+              </div>
             </div>
 
             {/* 🛠️ Actions Bar */}
@@ -584,7 +610,6 @@ const WorkPermitPage = () => {
                     <th>Timeline (Start → End)</th>
                     <th>Status</th>
                     <th>Safety & Risk</th>
-                    <th>Crew</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
@@ -632,23 +657,23 @@ const WorkPermitPage = () => {
                          </div>
                       </td>
                       <td>
-                        <div className="wp-meta-pill">
-                          <span className="material-symbols-rounded">groups</span>
-                          {p.workers} Techs
-                        </div>
-                      </td>
-                      <td>
                         <div className="wp-table-actions">
-                          <button className="wp-action-btn wp-edit-btn" onClick={() => handleEditPermit(p)}>
-                            <span className="material-symbols-rounded">edit_square</span>
-                          </button>
+                          {p.status === 'Approved' ? (
+                            <button className="wp-action-btn wp-chat-btn" onClick={() => { setActiveChatId(p.id); setIsChatOpen(true); }}>
+                              <span className="material-symbols-rounded">chat_bubble</span>
+                            </button>
+                          ) : (
+                            <button className="wp-action-btn wp-edit-btn" onClick={() => handleEditPermit(p)}>
+                              <span className="material-symbols-rounded">edit_square</span>
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
                   ))}
                   {filteredPermits.length === 0 && (
                     <tr>
-                      <td colSpan="10" style={{ textAlign: 'center', padding: '100px', color: '#94a3b8' }}>
+                      <td colSpan="9" style={{ textAlign: 'center', padding: '100px', color: '#94a3b8' }}>
                          <span className="material-symbols-rounded" style={{ fontSize: '48px', marginBottom: '12px', display: 'block' }}>search_off</span>
                          No results found for your filters.
                       </td>
@@ -660,6 +685,72 @@ const WorkPermitPage = () => {
           </div>
         )}
       </div>
+
+      {/* 💬 Floating Chat Drawer */}
+      {isChatOpen && (
+        <div className="wp-chat-overlay" onClick={() => setIsChatOpen(false)}>
+          <div className="wp-chat-drawer" onClick={e => e.stopPropagation()}>
+            <div className="wp-chat-header">
+               <div className="wp-chat-header-info">
+                  <span className="material-symbols-rounded">group</span>
+                  <div>
+                    <h3>Chat: {activeChatId}</h3>
+                    <p>Safety & Maintenance Group</p>
+                  </div>
+               </div>
+               <button className="wp-chat-close-btn" onClick={() => setIsChatOpen(false)}>
+                  <span className="material-symbols-rounded">close</span>
+               </button>
+            </div>
+            
+            <div className="wp-chat-body">
+               <div className="wp-chat-date-divider"><span>Today</span></div>
+               <div className="wp-chat-msg income">
+                  <div className="wp-chat-bubble">
+                    The work in Bay 2 is proceeding as per safety standards.
+                    <span className="wp-chat-time">10:30 AM</span>
+                  </div>
+               </div>
+               <div className="wp-chat-msg outcome">
+                  <div className="wp-chat-bubble">
+                    Acknowledged. Ensure the gas sensors are calibrated correctly.
+                    <span className="wp-chat-time">10:35 AM</span>
+                  </div>
+               </div>
+               {chatMessages.map((m, i) => (
+                  <div key={i} className="wp-chat-msg outcome">
+                    <div className="wp-chat-bubble">
+                      {m.text}
+                      <span className="wp-chat-time">{m.time}</span>
+                    </div>
+                  </div>
+               ))}
+            </div>
+
+            <div className="wp-chat-footer">
+               <input 
+                  placeholder="Type your message..." 
+                  value={typingMessage}
+                  onChange={(e) => setTypingMessage(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && typingMessage.trim()) {
+                      setChatMessages([...chatMessages, { text: typingMessage, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }]);
+                      setTypingMessage("");
+                    }
+                  }}
+               />
+               <button onClick={() => {
+                  if (typingMessage.trim()) {
+                    setChatMessages([...chatMessages, { text: typingMessage, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }]);
+                    setTypingMessage("");
+                  }
+               }}>
+                  <span className="material-symbols-rounded">send</span>
+               </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
