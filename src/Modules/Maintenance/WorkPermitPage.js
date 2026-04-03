@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import "./workpermit.css";
+import { API } from "../../Helpers/api";
 
 const WORK_TYPES = ["Hot Work", "Cold Work", "Electrical", "Confined Space", "Work at Height"];
 const HAZARDS = [
@@ -63,7 +64,89 @@ const WorkPermitPage = () => {
   const [chatMessages, setChatMessages] = useState([]);
   const [typingMessage, setTypingMessage] = useState("");
   const [errors, setErrors] = useState({});
-  const [permits, setPermits] = useState(INITIAL_PERMITS);
+  const [permits, setPermits] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const handleAutoFill = () => {
+    switch (activeStep) {
+      case 1:
+        setForm(prev => ({
+          ...prev,
+          title: "Boiler B-04 Annual Maintenance & Pressure Test",
+          workType: "Hot Work",
+          riskLevel: "High",
+          description: "Comprehensive inspection of boiler internal tubes, pressure testing up to 15 bar, and replacement of safety valve gaskets."
+        }));
+        break;
+      case 2:
+        setForm(prev => ({
+          ...prev,
+          plant: "Refinery Alpha - Unit 4",
+          area: "Technical Wing",
+          exactLocation: "Boiler Room #4, 2nd Floor Mezzanine",
+          startTime: new Date().toISOString().slice(0, 16),
+          endTime: new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 16)
+        }));
+        break;
+      case 3:
+        setWorkers([
+          { name: "John Smith", id: "EMP-0492", image: null },
+          { name: "Michael Ross", id: "EMP-0821", image: null }
+        ]);
+        break;
+      case 4:
+        setHazards(["fire", "gas", "fall"]);
+        setPpe(["Helmet", "Gloves", "Safety Shoes", "Goggles", "Harness"]);
+        break;
+      case 5:
+        setSafetyChecks({
+          gasTest: true,
+          isolated: true,
+          fireExt: true,
+          equipChecked: true,
+          ventilationCheck: true,
+          communicationSet: true,
+          lockOutTagOut: true,
+          scaffoldingReady: true
+        });
+        setForm(prev => ({
+          ...prev,
+          emergencyContact: "+91 99887-76655",
+          emergencyPoint: "Safety Station #12 (Zone B)"
+        }));
+        break;
+      case 6:
+        setForm(prev => ({
+          ...prev,
+          supervisor: "Rajesh Sharma",
+          safetyOfficer: "Amit Varma"
+        }));
+        break;
+      default:
+        break;
+    }
+  };
+
+  useEffect(() => {
+    fetchPermits();
+    const interval = setInterval(fetchPermits, 30000); // Poll every 30 seconds
+    return () => clearInterval(interval);
+  }, []);
+
+  const fetchPermits = async () => {
+    try {
+      const res = await API.workpermit.getAll();
+      if (res.status) {
+        // Sort by date (latest first)
+        const sorted = res.data.length > 0 ? res.data.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0)) : INITIAL_PERMITS;
+        setPermits(sorted);
+      }
+    } catch (error) {
+      console.error("Error fetching permits:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
@@ -85,9 +168,13 @@ const WorkPermitPage = () => {
   // Filtered Permits
   const filteredPermits = useMemo(() => {
     return permits.filter(p => {
-      const matchSearch = p.title.toLowerCase().includes(searchTerm.toLowerCase()) || p.id.toLowerCase().includes(searchTerm.toLowerCase());
+      const titleSearch = (p.title || "").toLowerCase();
+      const idSearch = (p.permitId || p.id || "").toLowerCase();
+      const search = searchTerm.toLowerCase();
+      
+      const matchSearch = titleSearch.includes(search) || idSearch.includes(search);
       const matchStatus = statusFilter === "All" || p.status === statusFilter;
-      const matchType = typeFilter === "All" || p.type === typeFilter;
+      const matchType = typeFilter === "All" || p.workType === typeFilter;
       return matchSearch && matchStatus && matchType;
     });
   }, [permits, searchTerm, statusFilter, typeFilter]);
@@ -113,43 +200,54 @@ const WorkPermitPage = () => {
     return `${h}h ${m}m`;
   }, [form.startTime, form.endTime]);
 
+  const saveStep = async (nextStep = null) => {
+    try {
+      const payload = {
+        ...form,
+        permitId,
+        hazards,
+        ppe,
+        safetyChecks,
+        workers: workers.filter(w => w.name || w.id).map(w => ({ name: w.name, id: w.id })),
+        status: isEditing ? (nextStep === null ? "Pending" : "Pending") : "Pending"
+      };
+
+      let res;
+      if (editingPermit) {
+        res = await API.workpermit.update(editingPermit, payload);
+      } else {
+        res = await API.workpermit.add(payload);
+        if (res.status) {
+          setEditingPermit(res.data._id); // Assign the new DB ID
+          setIsEditing(true);
+        }
+      }
+
+      if (res.status) {
+        if (nextStep !== null) setActiveStep(nextStep);
+        await fetchPermits();
+      }
+    } catch (err) {
+      console.error("Failed to sync step data:", err);
+    }
+  };
+
+  const handleNext = () => {
+    if (activeStep < 6) {
+      setActiveStep(activeStep + 1);
+    }
+  };
+
+  const handlePrev = () => {
+    if (activeStep > 1) {
+      setActiveStep(activeStep - 1);
+    }
+  };
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setForm(prev => ({ ...prev, [name]: value }));
     if (errors[name]) setErrors(prev => ({ ...prev, [name]: null }));
-  };
-
-  const fillExampleData = () => {
-    const now = new Date();
-    const future = new Date(now.getTime() + 4 * 60 * 60 * 1000);
-    setForm({
-      ...form,
-      title: "Boiler B-04 Annual Maintenance",
-      description: "Comprehensive inspection of internal tubing and replacement of gaskets.",
-      plant: "Unit 3 Refinery",
-      area: "Zone B",
-      location: "Main Production Floor",
-      startTime: now.toISOString().slice(0, 16),
-      endTime: future.toISOString().slice(0, 16),
-      riskLevel: "Medium",
-    });
-    setWorkers([
-      { name: "John Smith", id: "TECH-101", image: null }, 
-      { name: "Mike Johnson", id: "TECH-105", image: null }
-    ]);
-    setHazards(["fire", "gas"]);
-    setPpe(["Helmet", "Gloves", "Safety Shoes", "Goggles"]);
-    setSafetyChecks({ 
-      gasTest: true, 
-      isolated: true, 
-      fireExt: true, 
-      equipChecked: true,
-      ventilationCheck: true,
-      communicationSet: true,
-      lockOutTagOut: true,
-      scaffoldingReady: false
-    });
-    setErrors({});
   };
 
   const resetForm = () => {
@@ -181,30 +279,31 @@ const WorkPermitPage = () => {
 
   const handleEditPermit = (p) => {
     setForm({
-      title: p.title,
-      description: "Annual maintenance and pressure testing of industrial boilers.",
-      workType: p.type,
-      plant: p.location,
-      area: "Technical Wing",
-      location: p.location,
-      exactLocation: "Boiler Room #4",
-      startTime: p.date + "T08:00",
-      endTime: p.date + "T16:00",
-      requestedBy: "Sandeep Kumar",
-      supervisor: "Rajesh Sharma",
-      safetyOfficer: "Amit Varma",
-      riskLevel: p.risk || "Low",
-      controlMeasures: "Constant gas monitoring",
-      remarks: "",
-      emergencyContact: "+91 99887-76655",
-      emergencyPoint: "Safety Station #04",
+      title: p.title || "",
+      description: p.description || "",
+      workType: p.workType || "Hot Work",
+      plant: p.plant || "",
+      area: p.area || "",
+      location: p.location || "",
+      exactLocation: p.exactLocation || "",
+      startTime: p.startTime ? new Date(p.startTime).toISOString().slice(0, 16) : "",
+      endTime: p.endTime ? new Date(p.endTime).toISOString().slice(0, 16) : "",
+      requestedBy: p.requestedBy || "Sandeep Kumar",
+      supervisor: p.supervisor || "Rajesh Sharma",
+      safetyOfficer: p.safetyOfficer || "Amit Varma",
+      riskLevel: p.riskLevel || "Low",
+      controlMeasures: p.controlMeasures || "",
+      remarks: p.remarks || "",
+      emergencyContact: p.emergencyContact || "+91 99887-76655",
+      emergencyPoint: p.emergencyPoint || "Safety Station #04",
     });
-    setWorkers([{ name: "John Smith", id: "TECH-101", image: null }]);
+    setWorkers(p.workers && Array.isArray(p.workers) && p.workers.length > 0 ? p.workers.map(w => ({ ...w, image: null })) : [{ name: "", id: "", image: null }]);
     setHazards(p.hazards || []);
     setPpe(p.ppe || []);
+    setSafetyChecks(p.safetyChecks || { gasTest: false, isolated: false, fireExt: false, equipChecked: false });
     setIsEditing(true);
-    setEditingPermit(p.id);
-    setPermitId(p.id);
+    setEditingPermit(p._id);
+    setPermitId(p.permitId);
     setActiveTab("request");
   };
 
@@ -218,32 +317,63 @@ const WorkPermitPage = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (validate()) {
-      if (isEditing) {
-        setPermits(permits.map(p => p.id === editingPermit ? { ...p, title: form.title, type: form.workType, risk: form.riskLevel, location: form.plant } : p));
-        setIsEditing(false);
-        setEditingPermit(null);
-      } else {
-        setPermits([{ 
-          id: permitId, 
-          title: form.title, 
-          type: form.workType, 
-          status: "Pending", 
-          date: new Date().toISOString().split('T')[0], 
-          location: form.plant, 
-          workers: workers.length,
-          risk: form.riskLevel,
-          hazards: [...hazards],
-          ppe: [...ppe],
-          hasAttachment: true 
-        }, ...permits]);
+      try {
+        if (isEditing) {
+          const res = await API.workpermit.update(editingPermit, {
+            title: form.title,
+            workType: form.workType,
+            riskLevel: form.riskLevel,
+            plant: form.plant,
+            description: form.description,
+            startTime: form.startTime,
+            endTime: form.endTime,
+            hazards: hazards,
+            ppe: ppe,
+            safetyChecks: safetyChecks,
+            workers: workers
+          });
+          if (res.status) {
+            setPermits(permits.map(p => p._id === editingPermit ? res.data : p));
+            setIsEditing(false);
+            setEditingPermit(null);
+          }
+        } else {
+          const res = await API.workpermit.add({ 
+            permitId: permitId, 
+            title: form.title, 
+            workType: form.workType, 
+            status: "Pending", 
+            plant: form.plant, 
+            description: form.description,
+            startTime: form.startTime,
+            endTime: form.endTime,
+            riskLevel: form.riskLevel,
+            hazards: [...hazards],
+            ppe: [...ppe],
+            safetyChecks: safetyChecks,
+            workers: workers
+          });
+          if (res.status) {
+            setPermits([res.data, ...permits]);
+          }
+        }
+        alert(isEditing ? "Updated Successfully!" : "Success!");
+        setActiveTab("history");
+        fetchPermits();
+      } catch (error) {
+        alert("Failed to save permit.");
       }
-      alert(isEditing ? "Updated Successfully!" : "Success!");
-      setActiveTab("history");
     }
   };
+
+  if (loading) {
+    return <div style={{ height: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#f8fafc" }}>
+      <div className="wp-loader">Initializing Safety Portal...</div>
+    </div>;
+  }
 
   return (
     <div className="wp-root wp-fade-in">
@@ -272,15 +402,17 @@ const WorkPermitPage = () => {
             <h1>Permit to Work</h1>
             <p>Enterprise Safety Management System</p>
           </div>
-          <div className="wp-header-actions">
-              <div className="wp-permit-id-badge">
-                 <span className="wp-id-label">Application Unique ID</span>
-                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <input className="wp-id-input" value={permitId} onChange={(e) => setPermitId(e.target.value)} spellCheck={false} />
-                    <span className="material-symbols-rounded" style={{ fontSize: '18px', color: '#64748b' }}>edit_square</span>
-                 </div>
-              </div>
-          </div>
+          {activeTab === "request" && (
+            <div className="wp-header-actions">
+                <div className="wp-permit-id-badge">
+                   <span className="wp-id-label">Application Unique ID</span>
+                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <input className="wp-id-input" value={permitId} onChange={(e) => setPermitId(e.target.value)} spellCheck={false} />
+                      <span className="material-symbols-rounded" style={{ fontSize: '18px', color: '#64748b' }}>edit_square</span>
+                   </div>
+                </div>
+            </div>
+          )}
         </header>
 
 
@@ -304,8 +436,15 @@ const WorkPermitPage = () => {
               {activeStep === 1 && (
                 <div className="wp-section-fade-in wp-section-modern">
                    <div className="wp-section-header-simple">
-                      <h2><span className="material-symbols-rounded">article</span> 1. Basic Job Details</h2>
-                      <p>Define the scope and classification of the work permit.</p>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                          <h2><span className="material-symbols-rounded">article</span> 1. Basic Job Details</h2>
+                          <p>Define the scope and classification of the work permit.</p>
+                        </div>
+                        <button type="button" className="wp-autofill-btn" onClick={handleAutoFill}>
+                          <span className="material-symbols-rounded">magic_button</span> Auto Fill Step
+                        </button>
+                      </div>
                    </div>
                    <div className="wp-grid">
                       <div className="wp-form-group wp-full">
@@ -338,8 +477,15 @@ const WorkPermitPage = () => {
               {activeStep === 2 && (
                 <div className="wp-section-fade-in wp-section-modern">
                    <div className="wp-section-header-simple">
-                      <h2><span className="material-symbols-rounded">pin_drop</span> 2. Location & Schedule</h2>
-                      <p>Where and when will this work occur?</p>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                          <h2><span className="material-symbols-rounded">pin_drop</span> 2. Location & Schedule</h2>
+                          <p>Where and when will this work occur?</p>
+                        </div>
+                        <button type="button" className="wp-autofill-btn" onClick={handleAutoFill}>
+                          <span className="material-symbols-rounded">magic_button</span> Auto Fill Step
+                        </button>
+                      </div>
                    </div>
                    <div className="wp-grid">
                       <div className="wp-form-group"><label>Plant / Unit</label><input name="plant" value={form.plant} onChange={handleInputChange} placeholder="E.g. Unit 4 Refinery" /></div>
@@ -373,8 +519,15 @@ const WorkPermitPage = () => {
               {activeStep === 3 && (
                 <div className="wp-section-fade-in wp-section-modern">
                    <div className="wp-section-header-simple">
-                      <h2><span className="material-symbols-rounded">engineering</span> 3. Technical Crew</h2>
-                      <p>Register all personnel involved in the task.</p>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                          <h2><span className="material-symbols-rounded">engineering</span> 3. Technical Crew</h2>
+                          <p>Register all personnel involved in the task.</p>
+                        </div>
+                        <button type="button" className="wp-autofill-btn" onClick={handleAutoFill}>
+                          <span className="material-symbols-rounded">magic_button</span> Auto Fill Step
+                        </button>
+                      </div>
                    </div>
                    <div className="wp-crew-grid">
                       {workers.map((w, i) => (
@@ -411,8 +564,15 @@ const WorkPermitPage = () => {
               {activeStep === 4 && (
                 <div className="wp-section-fade-in wp-section-modern">
                    <div className="wp-section-header-simple">
-                      <h2><span className="material-symbols-rounded">security</span> 4. Hazard Analysis & PPE</h2>
-                      <p>Identify risks and required protective equipment.</p>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                          <h2><span className="material-symbols-rounded">security</span> 4. Hazard Analysis & PPE</h2>
+                          <p>Identify risks and required protective equipment.</p>
+                        </div>
+                        <button type="button" className="wp-autofill-btn" onClick={handleAutoFill}>
+                          <span className="material-symbols-rounded">magic_button</span> Auto Fill Step
+                        </button>
+                      </div>
                    </div>
                    <div className="wp-risk-section">
                        <label className="wp-sub-label">Incident & Hazard Identification</label>
@@ -447,8 +607,15 @@ const WorkPermitPage = () => {
               {activeStep === 5 && (
                 <div className="wp-section-fade-in wp-section-modern">
                    <div className="wp-section-header-simple">
-                      <h2><span className="material-symbols-rounded">verified_user</span> 5. Safety Checklist & Emergency</h2>
-                      <p>Final safety verification and response details.</p>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                          <h2><span className="material-symbols-rounded">verified_user</span> 5. Safety Checklist & Emergency</h2>
+                          <p>Final safety verification and response details.</p>
+                        </div>
+                        <button type="button" className="wp-autofill-btn" onClick={handleAutoFill}>
+                          <span className="material-symbols-rounded">magic_button</span> Auto Fill Step
+                        </button>
+                      </div>
                    </div>
                    <div className="wp-grid">
                       <div className="wp-form-group wp-full">
@@ -508,8 +675,15 @@ const WorkPermitPage = () => {
               {activeStep === 6 && (
                 <div className="wp-section-fade-in wp-section-modern">
                    <div className="wp-section-header-simple">
-                      <h2><span className="material-symbols-rounded">assignment_turned_in</span> 6. Approval Workflow</h2>
-                      <p>Finalize the permit and send for authorization.</p>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                          <h2><span className="material-symbols-rounded">assignment_turned_in</span> 6. Approval Workflow</h2>
+                          <p>Finalize the permit and send for authorization.</p>
+                        </div>
+                        <button type="button" className="wp-autofill-btn" onClick={handleAutoFill}>
+                          <span className="material-symbols-rounded">magic_button</span> Auto Fill Step
+                        </button>
+                      </div>
                    </div>
                    <div className="wp-grid">
                       <div className="wp-form-group">
@@ -542,18 +716,18 @@ const WorkPermitPage = () => {
 
               {/* 🧙 Navigation Controls */}
               <div className="wp-wizard-nav">
-                 <button type="button" className="wp-nav-btn wp-prev" disabled={activeStep === 1} onClick={() => setActiveStep(activeStep - 1)}>
-                    <span className="material-symbols-rounded">arrow_back</span> Previous
-                 </button>
-                 {activeStep < 6 ? (
-                   <button type="button" className="wp-nav-btn wp-next" onClick={() => setActiveStep(activeStep + 1)}>
-                      Next Step <span className="material-symbols-rounded">arrow_forward</span>
-                   </button>
-                 ) : (
-                   <button type="submit" className="wp-nav-btn wp-submit">
-                      Submit for Final Approval <span className="material-symbols-rounded">send</span>
-                   </button>
-                 )}
+                  <button type="button" className="wp-nav-btn wp-prev" disabled={activeStep === 1} onClick={handlePrev}>
+                     <span className="material-symbols-rounded">arrow_back</span> Previous
+                  </button>
+                  {activeStep < 6 ? (
+                    <button type="button" className="wp-nav-btn wp-next" onClick={handleNext}>
+                       Next Step <span className="material-symbols-rounded">arrow_forward</span>
+                    </button>
+                  ) : (
+                    <button type="submit" className="wp-nav-btn wp-submit">
+                       Finalize & Submit <span className="material-symbols-rounded">send</span>
+                    </button>
+                  )}
               </div>
             </div>
 
@@ -563,7 +737,7 @@ const WorkPermitPage = () => {
                   <p>PERMIT UNIQUE ID: {permitId}</p>
                </div>
                <div className="wp-actions-right">
-                  <button type="button" className="wp-btn-main wp-btn-secondary">Save Draft</button>
+                  <button type="button" className="wp-btn-main wp-btn-secondary" onClick={() => saveStep()}>Save Draft</button>
                   <button type="submit" className="wp-btn-main wp-btn-primary">
                     {isEditing ? "Update Permit" : "Submit For Approval"} <span className="material-symbols-rounded">send</span>
                   </button>
@@ -615,38 +789,37 @@ const WorkPermitPage = () => {
                 </thead>
                 <tbody>
                   {filteredPermits.map((p, idx) => (
-                    <tr key={p.id} className="wp-fade-in">
+                    <tr key={p._id} className="wp-fade-in">
                       <td><span className="wp-table-sno">{idx + 1}</span></td>
-                      
                       <td>
-                        <span className="wp-clickable-id" onClick={() => handleEditPermit(p)}>#{p.id}</span>
+                        <span className="wp-clickable-id" onClick={() => handleEditPermit(p)}>#{p.permitId}</span>
                       </td>
                       <td>
                         <div className="wp-table-title clickable" onClick={() => handleEditPermit(p)}>
-                          <h4>{p.title}</h4>
+                           <h4>{p.title}</h4>
                         </div>
                       </td>
-                      <td><span className="wp-history-type">{p.type}</span></td>
+                      <td><span className="wp-history-type">{p.workType}</span></td>
                       <td>
                         <div className="wp-meta-pill">
                           <span className="material-symbols-rounded">location_on</span>
-                          {p.location}
+                          {p.plant || "N/A"}
                         </div>
                       </td>
                       <td>
                         <div className="wp-table-date-group">
-                           <div className="wp-meta-pill"><span className="material-symbols-rounded">schedule</span> {p.date} (08:00 AM)</div>
-                           <div className="wp-meta-pill"><span className="material-symbols-rounded">arrow_right_alt</span> {p.date} (05:30 PM)</div>
+                           <div className="wp-meta-pill"><span className="material-symbols-rounded">schedule</span> {new Date(p.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                           <div className="wp-meta-pill"><span className="material-symbols-rounded">arrow_right_alt</span> {new Date(p.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
                         </div>
                       </td>
                       <td>
-                        <span className={`wp-history-badge wp-badge-${p.status.toLowerCase()}`}>
+                        <span className={`wp-history-badge wp-badge-${p.status?.toLowerCase() || 'pending'}`}>
                           {p.status}
                         </span>
                       </td>
                       <td>
                          <div className="wp-table-safety-group">
-                            <span className={`wp-risk-tag wp-risk-${(p.risk || 'Low').toLowerCase()}`}>{p.risk || 'Low'} Risk</span>
+                            <span className={`wp-risk-tag wp-risk-${(p.riskLevel || 'Low').toLowerCase()}`}>{p.riskLevel || 'Low'} Risk</span>
                             <div className="wp-table-hazard-icons">
                                {p.hazards?.map(h => (
                                  <span key={h} className="material-symbols-rounded" title={h}>
@@ -659,7 +832,7 @@ const WorkPermitPage = () => {
                       <td>
                         <div className="wp-table-actions">
                           {p.status === 'Approved' ? (
-                            <button className="wp-action-btn wp-chat-btn" onClick={() => { setActiveChatId(p.id); setIsChatOpen(true); }}>
+                            <button className="wp-action-btn wp-chat-btn" onClick={() => { setActiveChatId(p.permitId); setIsChatOpen(true); }}>
                               <span className="material-symbols-rounded">chat_bubble</span>
                             </button>
                           ) : (

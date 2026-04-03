@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { 
   BarChart as ReBarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, 
   ResponsiveContainer, PieChart, Pie, Cell 
 } from "recharts";
 import "./maintenance.css";
+import { API } from "../../Helpers/api";
 
 // ─── Static Data ──────────────────────────────────────────────────────────────
 const INITIAL_MACHINES = [
@@ -25,25 +26,6 @@ const INITIAL_ZONES = [
   { id: "Zone C", availability: 87, color: "#3b82f6" },
 ];
 
-const REASONS = [
-  "Mechanical Breakdown",
-  "Electrical Fault",
-  "Hydraulic Leak",
-  "Overheating",
-  "Belt / Chain Snap",
-  "Software / PLC Error",
-  "Preventive Maintenance",
-  "Other",
-];
-
-const TEAM_MEMBERS = [
-  { id: "T001", name: "Rajesh Kumar", role: "Senior Technician", avatar: "RK", color: "#3b82f6", resolved: 142, mttr: "3.2h", score: 9.4, available: true },
-  { id: "T002", name: "Priya Sharma", role: "Electrical Engineer", avatar: "PS", color: "#ef4444", resolved: 98, mttr: "4.5h", score: 8.7, available: false },
-  { id: "T003", name: "Amit Singh", role: "Mechanical Technician", avatar: "AS", color: "#22c55e", resolved: 115, mttr: "4.1h", score: 8.9, available: true },
-  { id: "T004", name: "Neha Patel", role: "PLC Specialist", avatar: "NP", color: "#f59e0b", resolved: 87, mttr: "3.8h", score: 9.1, available: true },
-  { id: "T005", name: "Vikram Rao", role: "Hydraulics Expert", avatar: "VR", color: "#8b5cf6", resolved: 124, mttr: "3.5h", score: 9.3, available: false },
-];
-
 const STATUS_COLORS = {
   Pending: { bg: "#fff7ed", text: "#c2410c", border: "#fed7aa", dot: "#f97316" },
   Assigned: { bg: "#eff6ff", text: "#1d4ed8", border: "#bfdbfe", dot: "#3b82f6" },
@@ -51,8 +33,6 @@ const STATUS_COLORS = {
   Resolved: { bg: "#f0fdf4", text: "#166534", border: "#bbf7d0", dot: "#22c55e" },
   "OTP Verified": { bg: "#faf5ff", text: "#6b21a8", border: "#e9d5ff", dot: "#a855f7" },
 };
-
-const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
 
 const SEED_TICKETS = [
   { id: "MNT-001", machine: "M4-R1", machineName: "Machine 4 - Row 1", zone: "Zone A", line: "Production Line 1", reason: "Hydraulic Leak", description: "Hydraulic oil leaking from the main cylinder joint.", raisedBy: "Arjun Mehta", raisedAt: "2026-03-28T08:45:00", status: "OTP Verified", assignedTo: "T005", assignedName: "Vikram Rao", resolvedAt: "2026-03-28T13:20:00", otp: "582904", otpVerified: true, priority: "High", downtime: "4h 35m", remark: "Replaced cylinder O-ring and tightened joints. Tested for 30 min — no leak." },
@@ -102,7 +82,7 @@ const BreakdownBarChart = ({ data, labels, colors, details }) => {
                 {details[i].map((inc, idx) => (
                   <div key={idx} className="mnt-tooltip-item">
                     <span className="mnt-tooltip-dot" style={{ background: colors[i % colors.length] }} />
-                    <p><strong>{inc.machine}</strong>: {inc.reason}</p>
+                    <p><strong>{inc.machine?.machineId || inc.machine}</strong>: {inc.reason}</p>
                     <span className="mnt-tooltip-time">{new Date(inc.raisedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                   </div>
                 ))}
@@ -147,7 +127,7 @@ const DonutChart = ({ segments }) => {
 
 // ─── Gauge (availability %) ───────────────────────────────────────────────────
 const GaugeChart = ({ value, label, color }) => {
-  const r = 45, cx = 60, cy = 60, circum = Math.PI * r, pct = Math.min(Math.max(value, 0), 100) / 100, dash = pct * circum;
+  const r = 45, circum = Math.PI * r, pct = Math.min(Math.max(value, 0), 100) / 100, dash = pct * circum;
   return (
     <div className="mnt-gauge-wrap">
       <svg width="120" height="70" viewBox="0 0 120 70">
@@ -208,8 +188,38 @@ const MaintenancePage = () => {
   const [otpError, setOtpError] = useState("");
   const [otpSuccess, setOtpSuccess] = useState(false);
   const [assignee, setAssignee] = useState("");
+  const [technicians, setTechnicians] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  useEffect(() => { setTimeout(() => setAnimIn(true), 100); }, []);
+  useEffect(() => {
+    fetchData();
+    const interval = setInterval(() => fetchData(true), 30000); // 30s auto-refresh (silent)
+    setTimeout(() => setAnimIn(true), 100);
+    return () => clearInterval(interval);
+  }, []);
+
+  const fetchData = async (isSilent = false) => {
+    try {
+      if (!isSilent) setLoading(true);
+      const [ticketsRes, machinesRes, techsRes] = await Promise.all([
+        API.maintenance.getTickets(),
+        API.maintenance.getMachines(),
+        API.maintenance.getTechnicians()
+      ]);
+      
+      if (ticketsRes.status) {
+        // Sort tickets by date (latest first)
+        const sortedTickets = ticketsRes.data.sort((a, b) => new Date(b.raisedAt) - new Date(a.raisedAt));
+        setTickets(sortedTickets);
+      }
+      if (machinesRes.status) setMachines(machinesRes.data.length > 0 ? machinesRes.data : INITIAL_MACHINES);
+      if (techsRes.status) setTechnicians(techsRes.data);
+    } catch (error) {
+      console.error("Error fetching maintenance data:", error);
+    } finally {
+      if (!isSilent) setLoading(false);
+    }
+  };
 
   // Update localStorage whenever tickets change
   useEffect(() => {
@@ -224,15 +234,33 @@ const MaintenancePage = () => {
   const criticalCount = tickets.filter(t => t.priority === "Critical").length;
   const avgResolutionHours = 4.6;
 
-  const filteredTickets = tickets.filter(t => {
-    const matchStatus = filterStatus === "All" || t.status === filterStatus;
-    const matchSearch = !searchText ||
-      t.machine.toLowerCase().includes(searchText.toLowerCase()) ||
-      t.reason.toLowerCase().includes(searchText.toLowerCase()) ||
-      t.raisedBy.toLowerCase().includes(searchText.toLowerCase()) ||
-      t.id.toLowerCase().includes(searchText.toLowerCase());
-    return matchStatus && matchSearch;
-  });
+  const filteredTickets = useMemo(() => {
+    let list = [...tickets];
+    
+    // Safety check for tickets format and explicit sort
+    list.sort((a, b) => new Date(b.raisedAt) - new Date(a.raisedAt));
+
+    return list.filter(t => {
+      const matchStatus = filterStatus === "All" || t.status === filterStatus;
+      
+      // Safe string matching for search
+      const machineId = (t.machine?.machineId || t.machine || "").toString().toLowerCase();
+      const machineNameSearch = (t.machineName || "").toLowerCase();
+      const reasonSearch = (t.reason || "").toLowerCase();
+      const raisedBySearch = (t.raisedBy || "").toLowerCase();
+      const ticketIdSearch = (t.ticketId || t.id || "").toLowerCase();
+      const search = searchText.toLowerCase();
+
+      const matchSearch = !searchText ||
+        machineId.includes(search) ||
+        machineNameSearch.includes(search) ||
+        reasonSearch.includes(search) ||
+        raisedBySearch.includes(search) ||
+        ticketIdSearch.includes(search);
+        
+      return matchStatus && matchSearch;
+    });
+  }, [tickets, filterStatus, searchText]);
 
   // ── Chart Logic ──
   const getChartData = () => {
@@ -280,53 +308,115 @@ const MaintenancePage = () => {
   const chartInfo = getChartData();
 
   // ── Action Handlers ──
-  const handleRaise = () => {
+  const handleRaise = async () => {
     if (!form.machine || !form.reason || !form.raisedBy || !form.incidentTime) {
       setFormError("Please fill all required fields."); return;
     }
-    const machine = machines.find(m => m.id === form.machine);
-    const newTicket = { id: `MNT-${String(tickets.length + 1).padStart(3, "0")}`, machine: form.machine, machineName: machine.name, zone: machine.zone, line: machine.line, reason: form.reason, description: form.description, raisedBy: form.raisedBy, raisedAt: form.incidentTime, status: "Pending", assignedTo: null, assignedName: null, resolvedAt: null, otp: generateOTP(), otpVerified: false, priority: "Medium", downtime: "Running…", remark: "" };
-    setTickets(prev => [newTicket, ...prev]);
-    setShowRaiseModal(false); setForm({ machine: "", reason: "", description: "", raisedBy: "", incidentTime: "" }); setFormError("");
+    try {
+      const res = await API.maintenance.createTicket({
+        machine: form.machine,
+        reason: form.reason,
+        description: form.description,
+        raisedBy: form.raisedBy,
+        raisedAt: form.incidentTime,
+        priority: "Medium"
+      });
+      if (res.status) {
+        setTickets(prev => [res.data, ...prev]);
+        setShowRaiseModal(false); 
+        setForm({ machine: "", reason: "", description: "", raisedBy: "", incidentTime: "" }); 
+        setFormError("");
+        fetchData(); // Refresh to get populated data
+      }
+    } catch (error) {
+      setFormError("Failed to report breakdown.");
+    }
   };
 
-  const handleAssign = () => {
+  const handleAssign = async () => {
     if (!assignee) return;
-    const member = TEAM_MEMBERS.find(m => m.id === assignee);
-    setTickets(prev => prev.map(t => t.id === selectedTicket.id ? { ...t, status: "In Progress", assignedTo: member.id, assignedName: member.name } : t));
-    setShowAssignModal(false); setAssignee("");
+    try {
+      const res = await API.maintenance.assignTicket({
+        ticketId: selectedTicket._id,
+        assignedTo: assignee
+      });
+      if (res.status) {
+        setTickets(prev => prev.map(t => t._id === selectedTicket._id ? res.data : t));
+        setShowAssignModal(false); setAssignee("");
+        fetchData();
+      }
+    } catch (error) {
+      console.error("Error assigning ticket:", error);
+    }
   };
 
-  const handleOtpVerify = () => {
-    if (otpInput === selectedTicket?.otp) {
-      setOtpSuccess(true);
-      setTickets(prev => prev.map(t => t.id === selectedTicket.id ? { ...t, status: "OTP Verified", otpVerified: true, resolvedAt: new Date().toISOString() } : t));
-      setTimeout(() => { setShowOtpModal(false); setOtpSuccess(false); setOtpInput(""); setOtpError(""); }, 1500);
-    } else { setOtpError("Invalid OTP. Verification failed."); }
+  const handleOtpVerify = async () => {
+    try {
+      const res = await API.maintenance.verifyOTP({
+        ticketId: selectedTicket._id,
+        otp: otpInput
+      });
+      if (res.status) {
+        setOtpSuccess(true);
+        setTickets(prev => prev.map(t => t._id === selectedTicket._id ? res.data : t));
+        setTimeout(() => { setShowOtpModal(false); setOtpSuccess(false); setOtpInput(""); setOtpError(""); }, 1500);
+        fetchData();
+      } else {
+        setOtpError("Invalid OTP. Verification failed.");
+      }
+    } catch (error) {
+      setOtpError("Verification failed.");
+    }
   };
 
-  const handleMarkResolved = (ticket) => {
-    setTickets(prev => prev.map(t => t.id === ticket.id ? { ...t, status: "Resolved", resolvedAt: new Date().toISOString() } : t));
+  const handleMarkResolved = async (ticket) => {
+    try {
+      const res = await API.maintenance.updateTicket(ticket._id, { status: "Resolved", resolvedAt: new Date().toISOString() });
+      if (res.status) {
+        setTickets(prev => prev.map(t => t._id === ticket._id ? res.data : t));
+        fetchData();
+      }
+    } catch (error) {
+      console.error("Error updating ticket:", error);
+    }
   };
 
-  const handleSaveRemark = () => {
+  const handleSaveRemark = async () => {
     if (!remarkInput.trim()) return;
-    setTickets(prev => prev.map(t => t.id === selectedTicket.id ? { ...t, remark: remarkInput } : t));
-    setShowRemarkModal(false);
-    setRemarkInput("");
+    try {
+      const res = await API.maintenance.updateTicket(selectedTicket._id, { remark: remarkInput });
+      if (res.status) {
+        setTickets(prev => prev.map(t => t._id === selectedTicket._id ? res.data : t));
+        setShowRemarkModal(false);
+        setRemarkInput("");
+        fetchData();
+      }
+    } catch (error) {
+      console.error("Error saving remark:", error);
+    }
   };
 
-  const handleAddMachine = () => {
+  const handleAddMachine = async () => {
     if (!machineForm.id || !machineForm.name || !machineForm.zone || !machineForm.line) {
       setFormError("Please fill all required fields."); return;
     }
-    if (machines.find(m => m.id === machineForm.id)) {
-      setFormError("Machine ID already exists."); return;
+    try {
+      const res = await API.maintenance.addMachine({
+        machineId: machineForm.id,
+        name: machineForm.name,
+        zone: machineForm.zone,
+        line: machineForm.line
+      });
+      if (res.status) {
+        setMachines(prev => [...prev, res.data]);
+        setShowAddMachineModal(false);
+        setMachineForm({ id: "", name: "", zone: zones[0]?.id || "Zone A", line: "Production Line 1" });
+        setFormError("");
+        fetchData();
+      }
+    } catch (error) {
+      setFormError("Failed to add machine.");
     }
-    setMachines(prev => [...prev, machineForm]);
-    setShowAddMachineModal(false);
-    setMachineForm({ id: "", name: "", zone: zones[0]?.id || "Zone A", line: "Production Line 1" });
-    setFormError("");
   };
 
   const handleAddZone = () => {
@@ -341,6 +431,10 @@ const MaintenancePage = () => {
     setZoneForm({ id: "", color: "#3b82f6" });
     setFormError("");
   };
+
+  if (loading) {
+    return <div className="mnt-loader">Loading maintenance data...</div>;
+  }
 
   return (
     <div className={`mnt-root ${animIn ? "mnt-anim-in" : ""}`}>
@@ -460,10 +554,10 @@ const MaintenancePage = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {tickets.filter(t => t.assignedTo === selectedTechnician.id || t.assignedName === selectedTechnician.name).map(t => (
-                      <tr key={t.id}>
-                        <td><span className="mnt-ticket-id">{t.id}</span></td>
-                        <td>{t.machine}</td>
+                    {tickets.filter(t => (t.assignedTo?._id || t.assignedTo) === selectedTechnician._id || t.assignedName === selectedTechnician.name).map(t => (
+                      <tr key={t._id}>
+                        <td><span className="mnt-ticket-id">{t.ticketId}</span></td>
+                        <td>{t.machine?.machineId || t.machine}</td>
                         <td>{t.reason}</td>
                         <td>{t.raisedBy}</td>
                         <td className="mnt-time-cell">{new Date(t.raisedAt).toLocaleString()}</td>
@@ -499,7 +593,7 @@ const MaintenancePage = () => {
                 <span className="material-symbols-rounded">precision_manufacturing</span>
               </div>
               <div className="mnt-modal-header-info">
-                <h2>{selectedMachineDetail.id} - {selectedMachineDetail.name}</h2>
+                <h2>{selectedMachineDetail.machineId} - {selectedMachineDetail.name}</h2>
                 <p>{selectedMachineDetail.zone} | {selectedMachineDetail.line}</p>
               </div>
             </div>
@@ -508,7 +602,7 @@ const MaintenancePage = () => {
           <div className="mnt-tech-stats-row">
             <div className="mnt-tech-stat-card">
               <span className="material-symbols-rounded mnt-stat-icon-blue">analytics</span>
-              <div><h3>{tickets.filter(t => t.machine === selectedMachineDetail.id).length}</h3><p>Total Failures</p></div>
+              <div><h3>{tickets.filter(t => (t.machine?._id || t.machine) === selectedMachineDetail._id).length}</h3><p>Total Failures</p></div>
             </div>
             <div className="mnt-tech-stat-card">
               <span className="material-symbols-rounded mnt-stat-icon-orange">timer</span>
@@ -573,9 +667,9 @@ const MaintenancePage = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {tickets.filter(t => t.machine === selectedMachineDetail.id).map(t => (
-                    <tr key={t.id}>
-                      <td><span className="mnt-log-id">{t.id}</span></td>
+                  {tickets.filter(t => (t.machine?._id || t.machine) === selectedMachineDetail._id).map(t => (
+                    <tr key={t._id}>
+                      <td><span className="mnt-log-id">{t.ticketId}</span></td>
                       <td>{t.reason}</td>
                       <td>{t.raisedBy}</td>
                       <td>{t.assignedName || "..."}</td>
@@ -674,9 +768,9 @@ const MaintenancePage = () => {
                 {filteredTickets.map(ticket => {
                   const sc = STATUS_COLORS[ticket.status] || STATUS_COLORS["Pending"];
                   return (
-                    <div key={ticket.id} className="mnt-ticket-card">
+                    <div key={ticket._id} className="mnt-ticket-card">
                       <div className="mnt-ticket-card-header">
-                        <span className="mnt-ticket-id">{ticket.id}</span>
+                        <span className="mnt-ticket-id">{ticket.ticketId}</span>
                         <div className="mnt-ticket-header-right">
                           <PriorityBadge priority={ticket.priority} />
                           <span className="mnt-status-badge" style={{ background: sc.bg, color: sc.text, border: `1px solid ${sc.border}` }}>
@@ -684,7 +778,7 @@ const MaintenancePage = () => {
                           </span>
                         </div>
                       </div>
-                      <div className="mnt-ticket-machine"><span className="material-symbols-rounded">precision_manufacturing</span><div><p className="mnt-ticket-machine-id">{ticket.machine}</p><p className="mnt-ticket-machine-name">{ticket.machineName}</p></div></div>
+                      <div className="mnt-ticket-machine"><span className="material-symbols-rounded">precision_manufacturing</span><div><p className="mnt-ticket-machine-id">{ticket.machine?.machineId || ticket.machine}</p><p className="mnt-ticket-machine-name">{ticket.machineName}</p></div></div>
                       <div className="mnt-ticket-reason"><span className="material-symbols-rounded">report_problem</span><span>{ticket.reason}</span></div>
                       {ticket.description && <div className="mnt-ticket-desc"><span className="material-symbols-rounded">description</span><span>{ticket.description}</span></div>}
                       <div className="mnt-ticket-meta">
@@ -706,7 +800,12 @@ const MaintenancePage = () => {
                           {ticket.status === "Resolved" && !ticket.otpVerified && <button className="mnt-action-btn mnt-btn-otp" onClick={() => { setSelectedTicket(ticket); setShowOtpModal(true); }}><span className="material-symbols-rounded">lock_open</span>Verify OTP</button>}
                           {ticket.status === "OTP Verified" && <div className="mnt-verified-badge"><span className="material-symbols-rounded">verified</span>Closed</div>}
                         </div>
-                        <div className="mnt-downtime-tag"><span className="material-symbols-rounded">timer</span>{ticket.downtime}</div>
+                        {ticket.downtime !== "Running…" && (
+                          <div className="mnt-downtime-tag"><span className="material-symbols-rounded">timer</span>{ticket.downtime}</div>
+                        )}
+                        {ticket.downtime === "Running…" && !["Resolved", "OTP Verified"].includes(ticket.status) && (
+                          <div className="mnt-downtime-tag"><span className="material-symbols-rounded">timer</span>Running…</div>
+                        )}
                       </div>
                     </div>
                   );
@@ -724,12 +823,12 @@ const MaintenancePage = () => {
                   <p className="mnt-add-label">Add New Machine</p>
                 </div>
                 {machines.map(m => {
-                  const mt = tickets.filter(t => t.machine === m.id); const act = mt.some(t => !["OTP Verified", "Resolved"].includes(t.status));
+                  const mt = tickets.filter(t => (t.machine?._id || t.machine) === m._id); const act = mt.some(t => !["OTP Verified", "Resolved"].includes(t.status));
                   const sc = act ? "#f97316" : "#22c55e";
                   return (
-                    <div key={m.id} className={`mnt-machine-card ${act ? "mnt-machine-issue" : ""}`} onClick={() => { setSelectedMachineDetail(m); setShowMachineDetail(true); }}>
+                    <div key={m._id} className={`mnt-machine-card ${act ? "mnt-machine-issue" : ""}`} onClick={() => { setSelectedMachineDetail(m); setShowMachineDetail(true); }}>
                       <div className="mnt-machine-card-header"><span className="material-symbols-rounded mnt-machine-big-icon" style={{ color: sc }}>precision_manufacturing</span><div className="mnt-machine-status-dot" style={{ background: sc }} /></div>
-                      <p className="mnt-machine-card-id">{m.id}</p><p className="mnt-machine-card-name">{m.name}</p><p className="mnt-machine-card-zone">{m.zone}</p>
+                      <p className="mnt-machine-card-id">{m.machineId}</p><p className="mnt-machine-card-name">{m.name}</p><p className="mnt-machine-card-zone">{m.zone}</p>
                       <div className="mnt-machine-card-status" style={{ color: sc }}><span className="material-symbols-rounded" style={{ fontSize: 16 }}>{act ? "warning" : "check_circle"}</span><span>{act ? "Issue Active" : "Operational"}</span></div>
                       <div className="mnt-machine-stats"><div className="mnt-machine-stat"><span className="mnt-machine-stat-val">{mt.length}</span><span className="mnt-machine-stat-label">Tickets</span></div><div className="mnt-machine-stat"><span className="mnt-machine-stat-val">{mt.filter(t => t.status === "OTP Verified").length}</span><span className="mnt-machine-stat-label">Resolved</span></div></div>
                     </div>
@@ -749,22 +848,22 @@ const MaintenancePage = () => {
                     Technician Performance Scorecard
                   </h3>
                   <div className="mnt-tech-performance">
-                    {TEAM_MEMBERS.map((tech, i) => {
-                      const stats = { resolved: 12, avg: "3.8h", score: 92, color: tech.color || "#3b82f6" };
+                    {technicians.map((tech, i) => {
+                      const stats = { resolved: 0, avg: "0h", score: 100, color: "#3b82f6" };
                       return (
-                        <div key={i} className="mnt-tech-row clickable" onClick={() => { setSelectedTechnician(tech); setShowTechLogModal(true); }}>
+                        <div key={tech._id} className="mnt-tech-row clickable" onClick={() => { setSelectedTechnician(tech); setShowTechLogModal(true); }}>
                           <div className="mnt-tech-avatar" style={{ background: stats.color + "20", color: stats.color }}>
                             {tech.name.split(" ").map(n => n[0]).join("")}
                           </div>
                           <div className="mnt-tech-info">
                             <p className="mnt-tech-name">{tech.name}</p>
-                            <p className="mnt-tech-meta">{tech.resolved} Resolved · Avg {tech.mttr} Turnaround</p>
+                            <p className="mnt-tech-meta">{tech.designation || "Technician"}</p>
                           </div>
                           <div className="mnt-tech-score-wrap">
                             <div className="mnt-tech-score-bar-track">
-                              <div className="mnt-tech-score-bar" style={{ width: `${tech.score * 10}%`, background: stats.color }} />
+                              <div className="mnt-tech-score-bar" style={{ width: `${stats.score}%`, background: stats.color }} />
                             </div>
-                            <span className="mnt-tech-score-val" style={{ color: stats.color }}>{tech.score}</span>
+                            <span className="mnt-tech-score-val" style={{ color: stats.color }}>{stats.score}</span>
                           </div>
                         </div>
                       );
@@ -844,7 +943,7 @@ const MaintenancePage = () => {
             <div className="mnt-modal-header"><h2>Report Breakdown</h2><button onClick={() => setShowRaiseModal(false)}>×</button></div>
             <div className="mnt-modal-body">
               {formError && <div className="mnt-form-error">{formError}</div>}
-              <div className="mnt-form-group"><label>Machine ID</label><select value={form.machine} onChange={e => setForm({...form, machine: e.target.value})}><option value="">Select Machine</option>{machines.map(m => <option key={m.id} value={m.id}>{m.id} - {m.name}</option>)}</select></div>
+              <div className="mnt-form-group"><label>Machine</label><select value={form.machine} onChange={e => setForm({...form, machine: e.target.value})}><option value="">Select Machine</option>{machines.map(m => <option key={m._id} value={m._id}>{m.machineId} - {m.name}</option>)}</select></div>
               <div className="mnt-form-group">
                 <label>Description (Optional)</label>
                 <textarea rows="3" value={form.description} onChange={e => setForm({...form, description: e.target.value})} 
@@ -871,24 +970,24 @@ const MaintenancePage = () => {
               <button onClick={() => setShowAssignModal(false)}>×</button>
             </div>
             <div className="mnt-modal-body mnt-assign-list">
-              {TEAM_MEMBERS.map(m => (
+              {technicians.map(m => (
                 <div 
-                  key={m.id} 
-                  className={`mnt-assign-item ${assignee === m.id ? "mnt-assign-item-selected" : ""} ${!m.available ? "mnt-assign-item-disabled" : ""}`} 
-                  onClick={() => m.available && setAssignee(m.id)}
+                  key={m._id} 
+                  className={`mnt-assign-item ${assignee === m._id ? "mnt-assign-item-selected" : ""} ${m.isBusy ? "mnt-assign-item-disabled" : ""}`} 
+                  onClick={() => !m.isBusy && setAssignee(m._id)}
                 >
                   <div className="mnt-assign-avatar-wrap">
-                    <div className="mnt-assign-avatar" style={{ background: m.color }}>{m.avatar}</div>
-                    <span className="mnt-assign-status-dot" style={{ background: m.available ? "#22c55e" : "#ef4444" }} />
+                    <div className="mnt-assign-avatar" style={{ background: "#3b82f6" }}>{m.name.split(" ").map(n => n[0]).join("")}</div>
+                    <span className="mnt-assign-status-dot" style={{ background: m.isBusy ? "#ef4444" : "#22c55e" }} />
                   </div>
                   <div className="mnt-assign-info">
                     <p className="mnt-assign-name">{m.name}</p>
-                    <p className="mnt-assign-role">{m.role}</p>
+                    <p className="mnt-assign-role">{m.designation || "Technician"}</p>
                   </div>
-                  <div className="mnt-assign-status-pill" style={{ color: m.available ? "#16a34a" : "#dc2626", background: m.available ? "#f0fdf4" : "#fef2f2" }}>
-                    {m.available ? "Available" : "Busy"}
+                  <div className="mnt-assign-status-pill" style={{ color: m.isBusy ? "#dc2626" : "#16a34a", background: m.isBusy ? "#fef2f2" : "#f0fdf4" }}>
+                    {m.isBusy ? "Busy" : "Available"}
                   </div>
-                  {assignee === m.id && <span className="material-symbols-rounded mnt-assign-check">check_circle</span>}
+                  {assignee === m._id && <span className="material-symbols-rounded mnt-assign-check">check_circle</span>}
                 </div>
               ))}
             </div>

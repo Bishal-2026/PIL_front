@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import "./maintenance.css";
+import { API } from "../../Helpers/api";
 
 const REASONS = [
   "Mechanical Breakdown",
@@ -21,49 +22,34 @@ const INITIAL_MACHINES = [
 ];
 
 const MaintenanceReportingPage = () => {
-    // Standard data from localStorage or seed
-    const [tickets, setTickets] = useState(() => {
-        const saved = localStorage.getItem("mnt_tickets");
-        if (saved) return JSON.parse(saved);
-        
-        // Dummy data for testing flow
-        return [
-            {
-                id: "MNT-9241",
-                machine: "M3-R1",
-                machineName: "Machine 3 - Row 1",
-                reason: "Mechanical Breakdown",
-                description: "Belt snapped during night shift.",
-                raisedBy: "john",
-                raisedAt: new Date(Date.now() - 86400000).toISOString(),
-                status: "Resolved",
-                assignedTo: "T001",
-                assignedName: "Rajesh Kumar",
-                otp: "123456",
-                otpVerified: false,
-                priority: "High",
-                downtime: "14h 22m",
-                remark: "Replaced primary drive belt."
-            },
-            {
-                id: "MNT-5415",
-                machine: "M1-R1",
-                machineName: "Machine 1 - Row 1",
-                reason: "Electrical Fault",
-                description: "Test run error.",
-                raisedBy: "john",
-                raisedAt: new Date().toISOString(),
-                status: "In Progress",
-                assignedTo: "T002",
-                assignedName: "Priya Sharma",
-                otp: "654321",
-                otpVerified: false,
-                priority: "Medium",
-                downtime: "Running...",
-                remark: ""
+    const [tickets, setTickets] = useState([]);
+    const [machines, setMachines] = useState(INITIAL_MACHINES);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        fetchData();
+        const interval = setInterval(() => fetchData(true), 20000); // 20s update (silent)
+        return () => clearInterval(interval);
+    }, []);
+
+    const fetchData = async (isSilent = false) => {
+        try {
+            if (!isSilent) setLoading(true);
+            const [ticketsRes, machinesRes] = await Promise.all([
+                API.maintenance.getTickets(),
+                API.maintenance.getMachines()
+            ]);
+            if (ticketsRes.status) {
+                const sorted = ticketsRes.data.sort((a, b) => new Date(b.raisedAt) - new Date(a.raisedAt));
+                setTickets(sorted);
             }
-        ];
-    });
+            if (machinesRes.status && machinesRes.data.length > 0) setMachines(machinesRes.data);
+        } catch (error) {
+            console.error("Error fetching data:", error);
+        } finally {
+            if (!isSilent) setLoading(false);
+        }
+    };
 
     const [reporterName, setReporterName] = useState(localStorage.getItem("reporter_name") || "");
     const [isRegistered, setIsRegistered] = useState(!!localStorage.getItem("reporter_name"));
@@ -83,10 +69,7 @@ const MaintenanceReportingPage = () => {
     const [otpInput, setOtpInput] = useState("");
     const [otpError, setOtpError] = useState("");
 
-    // SYNC WITH LOCALSTORAGE
-    useEffect(() => {
-        localStorage.setItem("mnt_tickets", JSON.stringify(tickets));
-    }, [tickets]);
+    // Removed local storage sync
 
     const handleRegister = () => {
         if (!reporterName) return alert("Please enter your name.");
@@ -95,43 +78,40 @@ const MaintenanceReportingPage = () => {
         setTicketForm(prev => ({ ...prev, raisedBy: reporterName }));
     };
 
-    const handleReport = (e) => {
+    const handleReport = async (e) => {
         e.preventDefault();
         if (!ticketForm.machine || !ticketForm.reason) return alert("Please fill mandatory fields.");
 
-        const machineName = INITIAL_MACHINES.find(m => m.id === ticketForm.machine)?.name || "Unknown Machine";
-        const newTicket = {
-            id: `MNT-${Math.floor(1000 + Math.random() * 9000)}`,
-            machine: ticketForm.machine,
-            machineName: machineName,
-            reason: ticketForm.reason,
-            description: ticketForm.description,
-            raisedBy: reporterName,
-            raisedAt: ticketForm.incidentTime,
-            status: "Pending",
-            assignedTo: null,
-            assignedName: null,
-            otp: Math.floor(100000 + Math.random() * 900000).toString(),
-            otpVerified: false,
-            priority: "Medium",
-            downtime: "Running...",
-            remark: ""
-        };
+        try {
+            const res = await API.maintenance.createTicket({
+                machine: ticketForm.machine,
+                reason: ticketForm.reason,
+                description: ticketForm.description,
+                raisedBy: reporterName,
+                raisedAt: ticketForm.incidentTime,
+                priority: "Medium"
+            });
 
-        setTickets([newTicket, ...tickets]);
-        setFormSuccess(true);
-        setTimeout(() => {
-            setFormSuccess(false);
-            setActiveTab("history");
-        }, 2000);
+            if (res.status) {
+                setTickets([res.data, ...tickets]);
+                setFormSuccess(true);
+                setTimeout(() => {
+                    setFormSuccess(false);
+                    setActiveTab("history");
+                    fetchData();
+                }, 2000);
 
-        setTicketForm({
-            machine: "",
-            reason: "",
-            description: "",
-            raisedBy: reporterName,
-            incidentTime: new Date().toISOString().slice(0, 16)
-        });
+                setTicketForm({
+                    machine: "",
+                    reason: "",
+                    description: "",
+                    raisedBy: reporterName,
+                    incidentTime: new Date().toISOString().slice(0, 16)
+                });
+            }
+        } catch (error) {
+            alert("Failed to report breakdown.");
+        }
     };
 
     const handleCloseRequest = (ticket) => {
@@ -141,17 +121,30 @@ const MaintenanceReportingPage = () => {
         setOtpInput("");
     };
 
-    const handleVerifyOtp = () => {
-        if (otpInput === selectedTicket.otp) {
-            setTickets(tickets.map(t => 
-                t.id === selectedTicket.id ? { ...t, status: "OTP Verified", otpVerified: true, resolvedAt: new Date().toISOString() } : t
-            ));
-            setShowOtpModal(false);
-            alert("Ticket closed successfully!");
-        } else {
-            setOtpError("Invalid OTP. Please check with your supervisor.");
+    const handleVerifyOtp = async () => {
+        try {
+            const res = await API.maintenance.verifyOTP({
+                ticketId: selectedTicket._id,
+                otp: otpInput
+            });
+            if (res.status) {
+                setTickets(tickets.map(t => 
+                    t._id === selectedTicket._id ? res.data : t
+                ));
+                setShowOtpModal(false);
+                alert("Ticket closed successfully!");
+                fetchData();
+            } else {
+                setOtpError("Invalid OTP. Please check with your supervisor.");
+            }
+        } catch (error) {
+            setOtpError("Verification failed.");
         }
     };
+
+    if (loading) {
+        return <div className="mnt-loader">Loading portal...</div>;
+    }
 
     if (!isRegistered) {
         return (
@@ -200,10 +193,10 @@ const MaintenanceReportingPage = () => {
                     
                     <form onSubmit={handleReport}>
                         <div className="mnt-form-group">
-                            <label>Machine ID</label>
+                            <label>Machine</label>
                             <select value={ticketForm.machine} onChange={e => setTicketForm({...ticketForm, machine: e.target.value})}>
                                 <option value="">Select Machine</option>
-                                {INITIAL_MACHINES.map(m => <option key={m.id} value={m.id}>{m.id} - {m.name}</option>)}
+                                {machines.map(m => <option key={m._id} value={m._id}>{m.machineId} - {m.name}</option>)}
                             </select>
                         </div>
                         <div className="mnt-form-group">
@@ -230,9 +223,9 @@ const MaintenanceReportingPage = () => {
             {activeTab === "history" && (
                 <div className="mnt-ticket-grid">
                     {myTickets.map(t => (
-                        <div key={t.id} className="mnt-ticket-card">
+                        <div key={t._id} className="mnt-ticket-card">
                             <div className="mnt-ticket-card-header">
-                                <span className="mnt-ticket-id">{t.id}</span>
+                                <span className="mnt-ticket-id">{t.ticketId}</span>
                                 <span className={`mnt-status-badge ${t.status === "OTP Verified" ? "mnt-kpi-green" : "mnt-kpi-orange"}`} 
                                       style={{ background: t.otpVerified ? "#f0fdf4" : "#fff7ed", padding: "6px 12px", borderRadius: "8px", fontSize: "11px", fontWeight: "800" }}>
                                     {t.status}
@@ -240,11 +233,21 @@ const MaintenanceReportingPage = () => {
                             </div>
                             <div className="mnt-ticket-machine" style={{ margin: "12px 0" }}>
                                 <span className="material-symbols-rounded">precision_manufacturing</span>
-                                <div><p className="mnt-ticket-machine-id">{t.machine}</p><p className="mnt-ticket-machine-name">{t.machineName}</p></div>
+                                <div><p className="mnt-ticket-machine-id">{t.machine?.machineId || t.machine}</p><p className="mnt-ticket-machine-name">{t.machineName}</p></div>
                             </div>
                             <div className="mnt-ticket-reason"><span>{t.reason}</span></div>
                             <p className="mnt-ticket-desc" style={{ fontSize: "12px" }}>{t.description || "No description provided."}</p>
-                            
+
+                            {t.assignedName && (
+                                <div className="mnt-ticket-tech-info" style={{ display: "flex", alignItems: "center", gap: "8px", margin: "10px 0", padding: "8px", background: "#f8fafc", borderRadius: "8px" }}>
+                                    <span className="material-symbols-rounded" style={{ fontSize: "18px", color: "#64748b" }}>engineering</span>
+                                    <div>
+                                        <p style={{ fontSize: "11px", color: "#64748b", margin: 0, lineHeight: 1 }}>Assigned Technician</p>
+                                        <p style={{ fontSize: "13px", color: "#334155", margin: 0, fontWeight: "600" }}>{t.assignedName}</p>
+                                    </div>
+                                </div>
+                            )}
+
                             <div className="mnt-ticket-actions">
                                 {t.status === "Resolved" && !t.otpVerified && (
                                     <button className="mnt-action-btn mnt-btn-otp" style={{ width: "100%", justifyContent: "center" }} onClick={() => handleCloseRequest(t)}>
@@ -278,7 +281,7 @@ const MaintenanceReportingPage = () => {
                     <div className="mnt-modal mnt-modal-sm" onClick={e => e.stopPropagation()} style={{ padding: "30px" }}>
                         <div className="mnt-modal-header" style={{ padding: "0 0 20px" }}><h2>Verify Repair OTP</h2><button onClick={() => setShowOtpModal(false)}>×</button></div>
                         <div className="mnt-otp-body">
-                            <p style={{ fontSize: "13px", color: "#64748b" }}>Ask technician for the closing OTP code for <strong>{selectedTicket.id}</strong></p>
+                            <p style={{ fontSize: "13px", color: "#64748b" }}>Ask technician for the closing OTP code for <strong>{selectedTicket.ticketId}</strong></p>
                             <input className="mnt-otp-input" value={otpInput} onChange={e => setOtpInput(e.target.value)} maxLength="6" />
                             {otpError && <p className="mnt-form-error">{otpError}</p>}
                         </div>

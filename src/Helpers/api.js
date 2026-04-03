@@ -195,7 +195,6 @@ const API = {
   // ✅ Section-specific helpers
 
   section: {
-    getAll: (params) => getData("/sections/all", params),
     getAll: (params = {}) => getData("/sections", params),
     getById: (id) => getData(`/sections/${id}`),
     add: (data) => postData("/sections", data),
@@ -258,6 +257,26 @@ const API = {
         limit,
         ...filters,
       }),
+  },
+
+  maintenance: {
+    getTickets: (params = {}) => getData("/maintenance/tickets", params),
+    getMachines: (params = {}) => getData("/maintenance/machines", params),
+    getTechnicians: (params = {}) => getData("/maintenance/technicians", params),
+    createTicket: (data) => postData("/maintenance/tickets", data),
+    updateTicket: (id, data) => putData(`/maintenance/tickets/${id}`, data),
+    assignTicket: (data) => postData("/maintenance/tickets/assign", data),
+    verifyOTP: (data) => postData("/maintenance/tickets/verify-otp", data),
+    addMachine: (data) => postData("/maintenance/machines", data),
+    getTechnicianTasks: (id) => getData(`/maintenance/tasks/${id}`),
+  },
+
+  workpermit: {
+    getAll: (params = {}) => getData("/workpermit/all", params),
+    getById: (id) => getData(`/workpermit/${id}`),
+    add: (data) => postData("/workpermit", data),
+    update: (id, data) => putData(`/workpermit/${id}`, data),
+    remove: (id) => deleteData(`/workpermit/${id}`),
   },
 };
 
