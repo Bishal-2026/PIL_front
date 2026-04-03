@@ -1,183 +1,488 @@
 import React, { useState, useEffect, useMemo } from "react";
-import "./workpermit_tv.css";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+   Clock, Shield, Activity, Users, MapPin,
+   Flame, AlertTriangle, CheckCircle2,
+   Construction, Timer, Calendar, Info,
+   Hash, User, Navigation, Layers, ShieldAlert,
+   ArrowRightCircle, History, RotateCcw, ChevronRight, Briefcase, FileText, Phone, Award,
+   Users2, HardHat, Link as LinkIcon, MapPin as MapPinIcon, Timer as TimerIcon
+} from "lucide-react";
+import { API } from "../../Helpers/api";
 
-const ROTATION_TIME = 15; // seconds
+const TIMER_SUMMARY = 15000; // 15 sec
+const TIMER_DETAIL = 12000;  // 12 sec per permit
+const REFRESH_INTERVAL = 5000;
 
-const MOCK_DATA = [
-  { 
-    id: "WP-791354", title: "Boiler B-04 Annual Maintenance & Pressure Test", type: "Hot Work", 
-    icon: "local_fire_department", location: "Refinery A, Floor 3", start: "08:00 AM", end: "04:00 PM", 
-    supervisor: "Rajesh Sharma", supervisorImg: "https://x-sg.xyz/v1/ai-faces/male/1", 
-    workers: 4, risk: "High", status: "Approved", hazards: ["fire", "gas"], ppe: ["Helmet", "Gloves"] 
-  },
-  { 
-    id: "WP-401012", title: "Main Gas Pipeline Safety Valve Replacement", type: "Cold Work", 
-    icon: "filter_alt", location: "Unit 3 Distribution Hub", start: "10:30 AM", end: "02:30 PM", 
-    supervisor: "Amit Varma", supervisorImg: "https://x-sg.xyz/v1/ai-faces/male/2", 
-    workers: 2, risk: "Medium", status: "Pending", hazards: ["gas"], ppe: ["Helmet", "Goggles"] 
-  },
-  { 
-    id: "WP-128492", title: "Electrical Sub-Station Transformer Wiring", type: "Electrical", 
-    icon: "bolt", location: "North Grid, Sector 7", start: "09:00 AM", end: "05:00 PM", 
-    supervisor: "Sandeep Kumar", supervisorImg: "https://x-sg.xyz/v1/ai-faces/male/3", 
-    workers: 3, risk: "High", status: "Approved", hazards: ["elec"], ppe: ["Gloves", "Boots"] 
-  },
-  { 
-    id: "WP-821903", title: "Chemical Tank-V2 Interior Coating Removal", type: "Confined Space", 
-    icon: "masks", location: "Tank Farm C, Bay 12", start: "07:00 AM", end: "11:00 AM", 
-    supervisor: "Sanjay Gupta", supervisorImg: "https://x-sg.xyz/v1/ai-faces/male/4", 
-    workers: 5, risk: "High", status: "Expired", hazards: ["gas", "confined"], ppe: ["Full Mask", "Harness"] 
-  },
-];
+
 
 const WorkPermitTV = () => {
-  const [permits] = useState(MOCK_DATA);
-  const [activeIndex, setActiveIndex] = useState(0);
-  const [timeLeft, setTimeLeft] = useState(ROTATION_TIME);
-  const [currentTime, setCurrentTime] = useState(new Date());
-  const [isExiting, setIsExiting] = useState(false);
+   const [permits, setPermits] = useState([]);
+   const [currentScreen, setCurrentScreen] = useState("summary");
+   const [activePermitIndex, setActivePermitIndex] = useState(0);
+   const [currentTime, setCurrentTime] = useState(new Date());
 
-  // 🕒 Clock Timer
-  useEffect(() => {
-    const clock = setInterval(() => setCurrentTime(new Date()), 1000);
-    return () => clearInterval(clock);
-  }, []);
+   useEffect(() => {
+      const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+      return () => clearInterval(timer);
+   }, []);
 
-  // 🔄 Rotation Logic
-  useEffect(() => {
-    if (permits.length === 0) return;
+   const fetchData = async () => {
+      try {
+         const res = await API.workpermit.getAll();
+         if (res.status) {
+            const today = new Date().toDateString();
+            const liveData = res.data.filter(p => {
+               const pDate = new Date(p.date || p.startTime).toDateString();
+               return (pDate === today || p.status === 'Pending') && p.status === 'Pending';
+            }).map(p => ({
+               ...p,
+               permitId: p.permitId || p.id,
+               startTimeDisplay: new Date(p.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+               endTimeDisplay: new Date(p.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+               risk: p.riskLevel || "Low",
+               safetyChecks: p.safetyChecks || {}
+            }));
+            setPermits(liveData);
+         } else { setPermits([]); }
+      } catch (e) { setPermits([]); }
+   };
 
-    const interval = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev <= 1) {
-          setIsExiting(true);
-          setTimeout(() => {
-            setActiveIndex((idx) => (idx + 1) % permits.length);
-            setIsExiting(false);
-          }, 800); // Wait for fade exit animation
-          return ROTATION_TIME;
-        }
-        return prev - 1;
-      });
-    }, 1000);
+   useEffect(() => {
+      fetchData();
+      const interval = setInterval(fetchData, REFRESH_INTERVAL);
+      return () => clearInterval(interval);
+   }, []);
 
-    return () => clearInterval(interval);
-  }, [permits]);
+   useEffect(() => {
+      if (permits.length === 0) return;
+      let timer;
+      if (currentScreen === "summary") {
+         timer = setTimeout(() => { setCurrentScreen("detail"); setActivePermitIndex(0); }, TIMER_SUMMARY);
+      } else {
+         timer = setTimeout(() => {
+            if (activePermitIndex < permits.length - 1) { setActivePermitIndex(i => i + 1); }
+            else { setCurrentScreen("summary"); }
+         }, TIMER_DETAIL);
+      }
+      return () => clearTimeout(timer);
+   }, [currentScreen, activePermitIndex, permits.length]);
 
-  const currentPermit = useMemo(() => permits[activeIndex], [permits, activeIndex]);
-  const progressWidth = (timeLeft / ROTATION_TIME) * 100;
+   const currentPermit = useMemo(() => permits[activePermitIndex] || {}, [permits, activePermitIndex]);
 
-  if (permits.length === 0) {
-    return (
-      <div className="wp-tv-root">
-        <div className="wp-tv-main wp-tv-empty">
-           <span className="material-symbols-rounded">inbox</span>
-           <h2>No permits scheduled for today.</h2>
-        </div>
+   const getRiskStyles = (risk) => {
+      switch (risk?.toLowerCase()) {
+         case 'high': return { bg: 'bg-red-500', text: 'text-white', light: 'bg-red-50', border: 'border-red-200', shadow: 'shadow-red-200', textPlain: 'text-red-500' };
+         case 'medium': return { bg: 'bg-amber-500', text: 'text-white', light: 'bg-amber-50', border: 'border-amber-200', shadow: 'shadow-amber-100', textPlain: 'text-amber-500' };
+         default: return { bg: 'bg-emerald-500', text: 'text-white', light: 'bg-emerald-50', border: 'border-emerald-200', shadow: 'shadow-emerald-100', textPlain: 'text-emerald-500' };
+      }
+   };
+
+   const getStatusStyles = (status) => {
+      switch (status?.toLowerCase()) {
+         case 'active': return { bg: 'bg-emerald-500', text: 'text-white', light: 'bg-emerald-50', textPlain: 'text-emerald-600', icon: '✅' };
+         case 'pending': return { bg: 'bg-orange-500', text: 'text-white', light: 'bg-orange-50', textPlain: 'text-orange-500', icon: '⏳' };
+         case 'closed': return { bg: 'bg-slate-400', text: 'text-white', light: 'bg-slate-50', textPlain: 'text-slate-500', icon: '📁' };
+         default: return { bg: 'bg-slate-500', text: 'text-white', light: 'bg-slate-50', textPlain: 'text-slate-500', icon: 'ℹ️' };
+      }
+   }
+
+   return (
+      <div className="fixed inset-0 bg-[#F1F5F9] text-slate-800 font-['Outfit'] overflow-hidden flex flex-col h-screen w-screen">
+
+         {/* 🏙️ GLOBAL TOP HEADER */}
+         <header className="bg-white border-b border-slate-200 py-6 px-12 flex justify-between items-center h-[120px] shadow-sm relative z-20">
+            <div className="flex items-center gap-6">
+               <div className="p-3 bg-blue-600 rounded-2xl shadow-lg ring-4 ring-blue-50">
+                  <Shield className="w-8 h-8 text-white" />
+               </div>
+               <div>
+                  <h1 className="text-3xl font-black tracking-tight text-slate-900 leading-none">PIL <span className="text-blue-600 uppercase">Safety</span></h1>
+                  <p className="text-[10px] font-bold text-slate-400 tracking-[0.2em] mt-1 uppercase">Mission Control Center</p>
+               </div>
+            </div>
+
+            <div className="flex flex-col items-center">
+               <h2 className="text-6xl font-mono font-black tracking-tighter text-slate-800">
+                  {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}
+               </h2>
+               <div className="flex items-center gap-2 text-slate-400 font-black uppercase mt-1 tracking-[0.2em] text-[10px]">
+                  <Calendar className="w-3 h-3 text-blue-600" />
+                  {currentTime.toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' })}
+               </div>
+            </div>
+
+            <div className="flex items-center gap-8">
+               <div className="text-right">
+                  <label className="text-[9px] font-black text-slate-300 tracking-[0.3em] block mb-1 uppercase">TOTAL ENTRIES</label>
+                  <div className="text-5xl font-mono font-black text-blue-600 leading-none">
+                     {permits.length.toString().padStart(2, '0')}
+                  </div>
+               </div>
+               <div className="h-14 w-px bg-slate-200" />
+               <div className="bg-blue-50 px-5 py-2.5 rounded-2xl border border-blue-100 flex flex-col items-end">
+                  <span className="text-[9px] font-black text-blue-400 uppercase tracking-widest leading-none mb-1">DATA SYNC</span>
+                  <span className="text-sm font-black text-blue-600 uppercase">
+                     {currentScreen === 'summary' ? 'OPERATIONAL Registry' : `Entry ${activePermitIndex + 1}/${permits.length}`}
+                  </span>
+               </div>
+            </div>
+         </header>
+
+         {/* 📊 CONTENT VIEWPORT */}
+         <main className="flex-1 p-10 flex flex-col overflow-hidden relative">
+            <AnimatePresence mode="wait">
+
+               {currentScreen === "summary" ? (
+                  /* --- SCREEN 1: MODERN PREMIUM TABLE (RE-IMAGINED) --- */
+                  <motion.div
+                     key="summary" initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }} transition={{ duration: 0.6 }}
+                     className="flex flex-col flex-1"
+                  >
+                     <div className="flex justify-between items-center mb-8 px-6">
+                        <div className="flex items-center gap-4">
+                           <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-200">
+                              <RotateCcw className="w-6 h-6 text-white" />
+                           </div>
+                           <div>
+                              <h2 className="text-4xl font-black text-slate-900 tracking-tighter">Site Activity Overview</h2>
+                              <div className="h-1.5 w-24 bg-blue-600 rounded-full mt-1" />
+                           </div>
+                        </div>
+
+                        <div className="bg-emerald-50 px-6 py-3 rounded-2xl border border-emerald-100 flex items-center gap-3 shadow-md">
+                           <div className="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-ping" />
+                           <div className="w-2.5 h-2.5 bg-emerald-500 rounded-full absolute" />
+                           <span className="text-emerald-600 font-black text-xs uppercase tracking-[0.2em] ml-1">Live Streaming</span>
+                        </div>
+                     </div>
+
+                     <div className="bg-white rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.06)] border border-slate-200 p-8 flex-1 flex flex-col overflow-hidden mb-4">
+                        <div className="overflow-auto no-scrollbar scroll-smooth">
+                           <table className="w-full text-left border-separate border-spacing-y-4">
+                              <thead>
+                                 <tr className="bg-gradient-to-r from-slate-900 via-blue-950 to-indigo-950 overflow-hidden" style={{boxShadow:'0 8px 32px rgba(15,23,42,0.25)'}}>
+                                    <th className="py-6 px-8 rounded-l-2xl text-white font-black text-[11px] uppercase tracking-[0.2em]">
+                                       <div className="flex items-center gap-2.5"><Hash className="w-4 h-4 text-sky-400" /> S.No</div>
+                                    </th>
+                                    <th className="py-6 px-6 text-white font-black text-[11px] uppercase tracking-[0.2em]">
+                                       <div className="flex items-center gap-2.5"><LinkIcon className="w-4 h-4 text-sky-400" /> Permit ID</div>
+                                    </th>
+                                    <th className="py-6 px-6 text-white font-black text-[11px] uppercase tracking-[0.2em]">
+                                       <div className="flex items-center gap-2.5"><Briefcase className="w-4 h-4 text-sky-400" /> Operation Title</div>
+                                    </th>
+                                    <th className="py-6 px-6 text-white font-black text-[11px] uppercase tracking-[0.2em]">
+                                       <div className="flex items-center gap-2.5"><Users2 className="w-4 h-4 text-sky-400" /> Workforce</div>
+                                    </th>
+                                    <th className="py-6 px-6 text-white font-black text-[11px] uppercase tracking-[0.2em]">
+                                       <div className="flex items-center gap-2.5"><MapPinIcon className="w-4 h-4 text-sky-400" /> Zone</div>
+                                    </th>
+                                    <th className="py-6 px-6 text-white font-black text-[11px] uppercase tracking-[0.2em]">
+                                       <div className="flex items-center gap-2.5"><TimerIcon className="w-4 h-4 text-sky-400" /> Time Window</div>
+                                    </th>
+                                    <th className="py-6 px-6 text-white font-black text-[11px] uppercase tracking-[0.2em]">
+                                       <div className="flex items-center gap-2.5"><ShieldAlert className="w-4 h-4 text-sky-400" /> Risk</div>
+                                    </th>
+                                    <th className="py-6 px-8 rounded-r-2xl text-white font-black text-[11px] uppercase tracking-[0.2em] text-center">
+                                       <div className="flex items-center gap-2.5 justify-center"><Activity className="w-4 h-4 text-sky-400" /> Status</div>
+                                    </th>
+                                 </tr>
+                              </thead>
+                              <tbody>
+                                 {permits.map((p, idx) => (
+                                    <motion.tr
+                                       initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.08, type: 'spring', stiffness: 120 }}
+                                       key={p.permitId}
+                                       className="group cursor-pointer"
+                                       style={{
+                                          background: idx % 2 === 0 ? '#ffffff' : '#f8fafc',
+                                          borderRadius: '24px',
+                                          transition: 'all 0.35s cubic-bezier(0.4,0,0.2,1)',
+                                       }}
+                                       whileHover={{ scale: 1.008, boxShadow: '0 12px 40px rgba(15,23,42,0.08)' }}
+                                    >
+                                       {/* S.NO */}
+                                       <td className="py-7 px-8 rounded-l-3xl" style={{borderLeft:'4px solid #3b82f6'}}>
+                                          <div className="w-10 h-10 rounded-xl flex items-center justify-center font-mono font-black text-lg" style={{background:'#eef2ff', color:'#4f46e5'}}>
+                                             {(idx + 1).toString().padStart(2, '0')}
+                                          </div>
+                                       </td>
+                                       {/* PERMIT ID */}
+                                       <td className="py-7 px-6">
+                                          <div className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-mono font-black text-lg tracking-tight" style={{background:'linear-gradient(135deg, #eff6ff, #eef2ff)', border:'1.5px solid #bfdbfe', color:'#1d4ed8'}}>
+                                             <LinkIcon className="w-4 h-4" style={{color:'#60a5fa'}} />
+                                             #{p.permitId}
+                                          </div>
+                                       </td>
+                                       {/* OPERATION */}
+                                       <td className="py-7 px-6">
+                                          <div className="flex items-center gap-4">
+                                             <div className="w-3 h-3 rounded-full ring-4 ring-opacity-20" style={{
+                                                background: p.workType?.toLowerCase().includes('hot') ? '#ef4444' : '#3b82f6',
+                                                ringColor: p.workType?.toLowerCase().includes('hot') ? 'rgba(239,68,68,0.2)' : 'rgba(59,130,246,0.2)'
+                                             }} />
+                                             <div className="flex flex-col">
+                                                <span className="text-[17px] font-black text-slate-900 leading-snug">{p.title}</span>
+                                                <span className="text-[10px] font-bold uppercase tracking-[0.15em] mt-0.5" style={{color: p.workType?.toLowerCase().includes('hot') ? '#dc2626' : '#6366f1'}}>{p.workType}</span>
+                                             </div>
+                                          </div>
+                                       </td>
+                                       {/* WORKFORCE */}
+                                       <td className="py-7 px-6">
+                                          <div className="inline-flex items-center gap-3 px-4 py-2.5 rounded-xl" style={{background:'#f1f5f9', border:'1px solid #e2e8f0'}}>
+                                             <HardHat className="w-5 h-5" style={{color:'#64748b'}} />
+                                             <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Crew:</span>
+                                             <span className="text-2xl font-black leading-none" style={{color:'#1e293b'}}>{(p.workers || []).length}</span>
+                                          </div>
+                                       </td>
+                                       {/* ZONE */}
+                                       <td className="py-7 px-6">
+                                          <div className="flex flex-col">
+                                             <span className="font-black text-slate-900 text-[16px] leading-snug">{p.plant}</span>
+                                             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{p.area || "Technical Wing"}</span>
+                                          </div>
+                                       </td>
+                                       {/* TIME */}
+                                       <td className="py-7 px-6">
+                                          <div className="inline-flex items-center gap-2.5 px-4 py-2.5 rounded-xl" style={{background:'#f8fafc', border:'1px solid #e2e8f0'}}>
+                                             <span className="text-[15px] font-mono font-black" style={{color:'#1e293b'}}>{p.startTimeDisplay || p.startTime}</span>
+                                             <ArrowRightCircle className="w-4 h-4" style={{color:'#94a3b8'}} />
+                                             <span className="text-[15px] font-mono font-black" style={{color:'#1e293b'}}>{p.endTimeDisplay || p.endTime}</span>
+                                          </div>
+                                       </td>
+                                       {/* RISK */}
+                                       <td className="py-7 px-6">
+                                          <motion.div
+                                             animate={p.risk === 'High' ? {
+                                                boxShadow: ["0 0 8px rgba(239,68,68,0.15)", "0 0 20px rgba(239,68,68,0.4)", "0 0 8px rgba(239,68,68,0.15)"],
+                                                scale: [1, 1.06, 1]
+                                             } : {}}
+                                             transition={{ repeat: Infinity, duration: 2.5 }}
+                                             className="inline-flex px-6 py-2 rounded-xl font-black text-[11px] uppercase tracking-[0.2em] text-center text-white"
+                                             style={{
+                                                background: p.risk === 'High' ? 'linear-gradient(135deg, #ef4444, #dc2626)' : p.risk === 'Medium' ? 'linear-gradient(135deg, #f59e0b, #d97706)' : 'linear-gradient(135deg, #10b981, #059669)',
+                                                boxShadow: p.risk === 'High' ? '0 4px 14px rgba(239,68,68,0.3)' : p.risk === 'Medium' ? '0 4px 14px rgba(245,158,11,0.3)' : '0 4px 14px rgba(16,185,129,0.25)'
+                                             }}
+                                          >
+                                             {p.risk}
+                                          </motion.div>
+                                       </td>
+                                       {/* STATUS */}
+                                       <td className="py-7 px-8 rounded-r-3xl">
+                                          <motion.div
+                                             whileHover={{ y: -2, scale: 1.04 }}
+                                             className="inline-flex items-center justify-center gap-2.5 px-6 py-2.5 rounded-xl font-black text-[11px] uppercase tracking-[0.2em] text-white"
+                                             style={{
+                                                background: p.status === 'Pending' ? 'linear-gradient(135deg, #f97316, #ea580c)' : 'linear-gradient(135deg, #10b981, #047857)',
+                                                boxShadow: p.status === 'Pending' ? '0 4px 14px rgba(249,115,22,0.3)' : '0 4px 14px rgba(16,185,129,0.3)'
+                                             }}
+                                          >
+                                             <span className="text-base">{p.status === 'Pending' ? '⏳' : '✅'}</span>
+                                             {p.status}
+                                          </motion.div>
+                                       </td>
+                                    </motion.tr>
+                                 ))}
+                              </tbody>
+                           </table>
+                        </div>
+                     </div>
+                  </motion.div>
+               ) : (
+                  /* --- SCREEN 2: DETAIL PAGE --- */
+                  <motion.div
+                     key={`detail-${activePermitIndex}`} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.6 }}
+                     className="flex-1 flex gap-8"
+                  >
+                     {/* 🛡️ MAIN DATA PANEL */}
+                     <div className="flex-1 bg-white rounded-[3rem] shadow-2xl border border-slate-100 p-12 flex flex-col relative overflow-hidden">
+                        <div className="flex justify-between items-start mb-10">
+                           <div>
+                              <p className="text-blue-600 font-mono font-black text-xl mb-3 border-b-2 border-blue-600 w-fit">#{currentPermit.permitId}</p>
+                              <h2 className="text-5xl font-black text-slate-900 leading-[1.1] tracking-tighter">{currentPermit.title}</h2>
+                           </div>
+                        </div>
+
+                        {/* CORE GRID */}
+                        <div className="grid grid-cols-4 gap-8 mb-10">
+                           <div className="space-y-1">
+                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block opacity-70">Category</label>
+                              <div className="flex items-center gap-3 text-slate-700 font-black text-lg">
+                                 <Shield className="w-5 h-5 text-blue-500" /> {currentPermit.workType}
+                              </div>
+                           </div>
+                           <div className="space-y-1">
+                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block opacity-70">Window</label>
+                              <div className="flex items-center gap-3 text-slate-700 font-black text-lg">
+                                 <Clock className="w-5 h-5 text-blue-500" /> {currentPermit.startTimeDisplay || currentPermit.startTime} — {currentPermit.endTimeDisplay || currentPermit.endTime}
+                              </div>
+                           </div>
+                           <div className="space-y-1">
+                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block opacity-70">Authorizer</label>
+                              <div className="flex items-center gap-3 text-slate-700 font-black text-lg">
+                                 <Award className="w-5 h-5 text-emerald-500" /> {currentPermit.authorizedBy || currentPermit.requestedBy}
+                              </div>
+                           </div>
+                           <div className="space-y-1">
+                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block opacity-70">Location</label>
+                              <div className="flex items-center gap-3 text-slate-700 font-black text-lg">
+                                 <MapPin className="w-5 h-5 text-blue-500" /> {currentPermit.plant}
+                              </div>
+                           </div>
+                        </div>
+
+                        {/* MORE DATA SECTION (CHECKLIST & OFFICIALS) */}
+                        <div className="grid grid-cols-12 gap-8 mb-10">
+                           <div className="col-span-12 bg-slate-50/50 p-6 rounded-[2rem] border border-slate-100 grid grid-cols-4 gap-4">
+                              {Object.keys(currentPermit.safetyChecks || {}).map((key, i) => (
+                                 <div key={i} className="flex items-center gap-3">
+                                    <CheckCircle2 className={`w-5 h-5 ${currentPermit.safetyChecks[key] ? 'text-emerald-500' : 'text-slate-200'}`} />
+                                    <span className="text-[10px] font-black text-slate-600 uppercase tracking-wider">{key.replace(/([A-Z])/g, ' $1')}</span>
+                                 </div>
+                              ))}
+                           </div>
+
+                           <div className="col-span-8 space-y-4">
+                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block opacity-70">Execution Strategy</label>
+                              <div className="p-6 bg-white border border-slate-100 rounded-3xl min-h-[80px] shadow-sm text-lg font-bold text-slate-500 italic">
+                                 "{currentPermit.description || "Routine maintenance and safety intervention as per site SOP."}"
+                              </div>
+                           </div>
+
+                           <div className="col-span-4 space-y-4">
+                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block opacity-70">Personnel in Command</label>
+                              <div className="space-y-2">
+                                 <div className="flex items-center justify-between p-3 bg-white border border-slate-100 rounded-2xl">
+                                    <span className="text-[10px] font-black text-slate-400 uppercase">Supervisor</span>
+                                    <span className="text-sm font-black text-slate-700">{currentPermit.supervisor || "---"}</span>
+                                 </div>
+                                 <div className="flex items-center justify-between p-3 bg-white border border-slate-100 rounded-2xl">
+                                    <span className="text-[10px] font-black text-slate-400 uppercase">Safety Officer</span>
+                                    <span className="text-sm font-black text-slate-700">{currentPermit.safetyOfficer || "---"}</span>
+                                 </div>
+                              </div>
+                           </div>
+                        </div>
+
+                        {/* CREW GRID */}
+                        <div className="mb-10">
+                           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-4 opacity-70">On-Site Execution Crew</label>
+                           <div className="flex flex-wrap gap-4">
+                              {(currentPermit.workers || []).map((w, i) => (
+                                 <div key={i} className="flex items-center gap-4 border border-slate-100 p-3 rounded-2xl bg-white shadow-sm pr-6 min-w-[200px]">
+                                    <img src={typeof w.image === 'string' ? w.image : "https://i.pravatar.cc/100"} className="w-12 h-12 rounded-xl object-cover ring-2 ring-slate-50" alt="" />
+                                    <div>
+                                       <p className="text-base font-black text-slate-800 leading-tight">{w.name}</p>
+                                       <p className="text-[9px] font-black text-blue-500 uppercase tracking-widest">{w.workerType || 'Staff'} {w.company ? '• ' + w.company : ''}</p>
+                                    </div>
+                                 </div>
+                              ))}
+                           </div>
+                        </div>
+
+                        {/* PPE & HAZARDS */}
+                        <div className="mt-auto grid grid-cols-2 gap-8 border-t border-slate-100 pt-8">
+                           <div className="flex flex-wrap gap-2">
+                              {currentPermit.ppe?.map(p => (
+                                 <span key={p} className="bg-blue-50 text-blue-600 px-4 py-1.5 rounded-xl border border-blue-100 text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
+                                    <CheckCircle2 className="w-3 h-3" /> {p}
+                                 </span>
+                              ))}
+                           </div>
+                           <div className="flex flex-wrap gap-2 justify-end">
+                              {currentPermit.hazards?.map(h => (
+                                 <span key={h} className="bg-red-50 text-red-600 px-4 py-1.5 rounded-xl border border-red-100 text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
+                                    <AlertTriangle className="w-3 h-3" /> {h}
+                                 </span>
+                              ))}
+                           </div>
+                        </div>
+                     </div>
+
+                     {/* 📊 COMPACT SIDEBAR */}
+                     <div className="w-[380px] flex flex-col gap-6 h-full">
+                        <div className={`p-8 rounded-[3rem] shadow-xl flex flex-col items-center justify-center text-center h-[200px] border-b-8 shadow-slate-100 ${getStatusStyles(currentPermit.status).light} ${getStatusStyles(currentPermit.status).textPlain} border-current`}>
+                           <RotateCcw className="w-12 h-12 mb-4 opacity-50" />
+                           <h3 className="text-4xl font-black uppercase tracking-tighter leading-none mb-1">{currentPermit.status}</h3>
+                           <p className="text-[9px] font-black uppercase tracking-[0.4em] opacity-60">Status Analysis</p>
+                        </div>
+
+                        <div className="bg-white rounded-[2rem] border border-slate-100 shadow-xl p-8 flex flex-col flex-1 relative">
+                           <label className="text-[9px] font-black text-slate-300 uppercase tracking-widest text-center block mb-6">Execution Risk</label>
+                           <div className="flex-1 flex flex-col items-center justify-center">
+                              <div className="p-6 rounded-full border-4 border-slate-50 mb-6 shadow-inner">
+                                 <h3 className={`text-6xl font-black tracking-tighter ${getRiskStyles(currentPermit.risk).textPlain}`}>{currentPermit.risk}</h3>
+                              </div>
+                              <div className="w-full h-3 bg-slate-50 rounded-full overflow-hidden p-1">
+                                 <motion.div
+                                    initial={{ width: 0 }} animate={{ width: currentPermit.risk === 'High' ? '100%' : currentPermit.risk === 'Medium' ? '66%' : '33%' }}
+                                    className={`h-full rounded-full ${getRiskStyles(currentPermit.risk).bg}`}
+                                 />
+                              </div>
+                           </div>
+
+                           <div className="mt-8 border-t border-slate-50 pt-6 space-y-3">
+                              <div className="flex items-center gap-3">
+                                 <Phone className="w-4 h-4 text-red-500" />
+                                 <div className="flex flex-col">
+                                    <span className="text-[8px] font-black text-slate-300 uppercase">Emergency SOS</span>
+                                    <span className="text-xs font-black text-slate-600">{currentPermit.emergencyContact || "+91 99887-76655"}</span>
+                                 </div>
+                              </div>
+                              <div className="flex items-center gap-3">
+                                 <MapPin className="w-4 h-4 text-emerald-500" />
+                                 <div className="flex flex-col">
+                                    <span className="text-[8px] font-black text-slate-300 uppercase">Nearest Point</span>
+                                    <span className="text-xs font-black text-slate-600 truncate max-w-[200px]">{currentPermit.emergencyPoint || "Medical Center"}</span>
+                                 </div>
+                              </div>
+                           </div>
+                        </div>
+
+                        {/* Progress Pill */}
+                        <div className="flex justify-center h-[90px]">
+                           <div className="bg-white w-full rounded-[2rem] border border-slate-200 flex items-center justify-center gap-4 text-4xl font-mono font-black shadow-lg shadow-slate-100">
+                              <span className="text-blue-600">{activePermitIndex + 1}</span>
+                              <span className="text-slate-100">/</span>
+                              <span className="text-slate-400">{permits.length}</span>
+                           </div>
+                        </div>
+                     </div>
+                  </motion.div>
+               )}
+            </AnimatePresence>
+         </main>
+
+         {/* 🛑 GLOBAL BOTTOM TICKER */}
+         <footer className="bg-slate-900 h-[100px] flex items-center overflow-hidden shrink-0 border-t-4 border-blue-600 shadow-[0_-10px_30px_rgba(0,0,0,0.2)]">
+            <div className="bg-blue-600 h-full px-12 flex items-center shrink-0 shadow-2xl relative z-10">
+               <AlertTriangle className="w-8 h-8 text-white animate-pulse" />
+               <span className="text-2xl font-black text-white uppercase italic ml-5 tracking-tighter">Safety Bulletin</span>
+            </div>
+            <div className="flex-1 flex items-center whitespace-nowrap overflow-hidden">
+               <motion.div
+                  initial={{ x: "0%" }} animate={{ x: "-50%" }} transition={{ repeat: Infinity, duration: 40, ease: "linear" }}
+                  className="flex gap-24 whitespace-nowrap"
+               >
+                  {[1, 2].map(i => (
+                     <div key={i} className="flex gap-24 items-center text-white font-black text-3xl uppercase tracking-tighter">
+                        <span>⚠ SAFETY FIRST: ENSURE ALL LOTO PROCEDURES ARE STRICTLY FOLLOWED BEFORE CORE INTERVENTION</span>
+                        <span className="text-white/30 italic">Report any unsafe condition or near-miss regardless of severity</span>
+                        <span>VERIFY ALL GAS SENSORS AND VENTILATION SYSTEMS PRIOR TO HOT WORK COMMENCEMENT</span>
+                     </div>
+                  ))}
+               </motion.div>
+            </div>
+         </footer>
+
+         <style dangerouslySetInnerHTML={{
+            __html: `
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        body { background: #F1F5F9 !important; }
+      `}} />
       </div>
-    );
-  }
-
-  return (
-    <div className="wp-tv-root">
-      {/* 🧩 Header */}
-      <header className="wp-tv-header">
-        <div className="wp-tv-title-block">
-          <h1>Today's Work Permit</h1>
-          <p>Real-time Site Safety Broadcast</p>
-        </div>
-        <div className="wp-tv-clock-block">
-          <span className="wp-tv-time">
-            {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}
-          </span>
-          <span className="wp-tv-date">
-            {currentTime.toLocaleDateString([], { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}
-          </span>
-        </div>
-      </header>
-
-      {/* 🧩 Main Permit Card */}
-      <div className="wp-tv-main">
-        <div className={`wp-tv-card ${isExiting ? 'wp-tv-fade-exit' : 'wp-tv-fade-active'}`}>
-           <div className="wp-tv-card-header">
-              <div className="wp-tv-left">
-                 <span className="wp-tv-permit-id">{currentPermit.id}</span>
-                 <h2 className="wp-tv-work-title">{currentPermit.title}</h2>
-              </div>
-              <span className={`wp-tv-status-badge wp-tv-badge-${currentPermit.status.toLowerCase()}`}>
-                 {currentPermit.status}
-              </span>
-           </div>
-
-           <div className="wp-tv-grid">
-              <div className="wp-tv-node">
-                 <div className="wp-tv-node-icon"><span className="material-symbols-rounded">{currentPermit.icon}</span></div>
-                 <div className="wp-tv-node-content">
-                    <label>Work Category</label>
-                    <span>{currentPermit.type}</span>
-                 </div>
-              </div>
-              <div className="wp-tv-node">
-                 <div className="wp-tv-node-icon"><span className="material-symbols-rounded">location_on</span></div>
-                 <div className="wp-tv-node-content">
-                    <label>Job Location</label>
-                    <span>{currentPermit.location}</span>
-                 </div>
-              </div>
-              <div className="wp-tv-node">
-                 <div className="wp-tv-node-icon"><span className="material-symbols-rounded">timeline</span></div>
-                 <div className="wp-tv-node-content">
-                    <label>Operational Window</label>
-                    <span>{currentPermit.start} → {currentPermit.end}</span>
-                 </div>
-              </div>
-              <div className="wp-tv-node">
-                 <div className="wp-tv-node-icon"><span className="material-symbols-rounded">person_alert</span></div>
-                 <div className="wp-tv-node-content">
-                    <label>Supervisor / Officer</label>
-                    <div className="wp-tv-supervisor-pill">
-                       <img src={currentPermit.supervisorImg} alt="Supervisor" />
-                       <span>{currentPermit.supervisor}</span>
-                    </div>
-                 </div>
-              </div>
-              <div className="wp-tv-node">
-                 <div className="wp-tv-node-icon"><span className="material-symbols-rounded">medical_services</span></div>
-                 <div className="wp-tv-node-content">
-                    <label>Safety Parameters (PPE/Hazards)</label>
-                    <div className="wp-tv-mini-icons">
-                       {currentPermit.hazards?.map(h => <span key={h} className="wp-tv-h-badge">{h}</span>)}
-                       {currentPermit.ppe?.map(p => <span key={p} className="wp-tv-p-badge">{p}</span>)}
-                    </div>
-                 </div>
-              </div>
-              <div className="wp-tv-node">
-                 <div className="wp-tv-node-icon"><span className="material-symbols-rounded">warning</span></div>
-                 <div className="wp-tv-node-content">
-                    <label>Critical Risk Index</label>
-                    <span className={`wp-tv-risk-pill wp-tv-risk-${currentPermit.risk.toLowerCase()}`}>
-                       {currentPermit.risk} RISK
-                    </span>
-                 </div>
-              </div>
-           </div>
-        </div>
-
-        {/* 🔢 Page Indicator (Outside Card Now) */}
-        <div className="wp-tv-counter">
-           Permit {activeIndex + 1} of {permits.length}
-        </div>
-      </div>
-
-      {/* ⏳ Rotation Footer */}
-      <footer className="wp-tv-footer">
-          <div className="wp-tv-progress-track">
-             <div className="wp-tv-progress-bar" style={{ width: `${progressWidth}%` }} />
-          </div>
-      </footer>
-
-    </div>
-  );
+   );
 };
 
 export default WorkPermitTV;

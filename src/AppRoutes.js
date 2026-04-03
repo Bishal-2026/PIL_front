@@ -27,6 +27,7 @@ import { normalizeRole } from "./Helpers/acl.js";
 import MaintenanceReportingPage from "./Modules/Maintenance/MaintenanceReportingPage.js";
 import WorkPermitPage from "./Modules/Maintenance/WorkPermitPage.js";
 import WorkPermitTV from "./Modules/Maintenance/WorkPermitTV.js";
+import WorkPermitApproval from "./Modules/Maintenance/WorkPermitApproval.js";
 import TechnicianPortalPage from "./Modules/Maintenance/TechnicianPortalPage.js";
 
 // App Modes
@@ -103,6 +104,7 @@ const AppRoutes = () => {
       <Route path="/report-breakdown" element={<MaintenanceReportingPage />} />
       <Route path="/work-permit" element={<WorkPermitPage />} />
       <Route path="/permit-display" element={<WorkPermitTV />} />
+      <Route path="/permit-approvals" element={<WorkPermitApproval />} />
       <Route path="/technician-portal" element={<TechnicianPortalPage />} />
       <Route path="*" element={<NotFound />} />
 

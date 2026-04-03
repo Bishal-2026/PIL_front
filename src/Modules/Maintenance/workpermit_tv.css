@@ -1,96 +1,25 @@
-/* ─── Work Permit TV / Large Monitor Design ─── */
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@800&display=swap');
+/* Global overrides for the TV dashboard */
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@100;200;300;400;500;600;700;800;900&family=JetBrains+Mono:wght@100;200;300;400;500;600;700;800&display=swap');
 
-:root {
-  --tv-bg: #f8fafc;
-  --tv-primary: #0f172a;
-  --tv-accent: #3b82f6;
-  --tv-border: #e2e8f0;
-  --tv-shadow: 0 40px 100px -20px rgba(15, 23, 42, 0.15);
-  --tv-radius: 40px;
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background-color: #020617;
 }
 
-.wp-tv-root {
-  width: 100vw; min-height: 100vh; overflow-y: auto;
-  background-color: var(--tv-bg);
-  background: radial-gradient(circle at 0% 0%, #ffffff 0%, #f1f5f9 100%);
-  font-family: 'Outfit', sans-serif;
-  color: var(--tv-primary);
-  display: flex; flex-direction: column;
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
-/* ─── Header ─── */
-.wp-tv-header {
-  padding: 30px 60px; display: flex; justify-content: space-between; align-items: flex-end;
-}
-.wp-tv-title-block h1 { font-size: 32px; font-weight: 800; margin: 0; color: var(--tv-primary); letter-spacing: -1px; }
-.wp-tv-title-block p { font-size: 16px; color: #64748b; font-weight: 600; margin-top: 4px; }
-
-.wp-tv-clock-block { text-align: right; }
-.wp-tv-time { font-family: 'JetBrains Mono', monospace; font-size: 28px; font-weight: 800; color: var(--tv-accent); display: block; }
-.wp-tv-date { font-size: 16px; color: #64748b; font-weight: 700; margin-top: 2px; display: block; }
-
-/* ─── Main Content ─── */
-.wp-tv-main { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 10px 60px 140px; position: relative; }
-
-.wp-tv-card {
-  width: 100%; max-width: 1250px; background: white; border-radius: var(--tv-radius);
-  padding: 60px 80px; box-shadow: var(--tv-shadow); border: 1px solid var(--tv-border);
-  position: relative; transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+@keyframes pulse-soft {
+  0%, 100% { opacity: 0.8; }
+  50% { opacity: 1; }
 }
 
-.wp-tv-card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 50px; }
-.wp-tv-permit-id { font-family: 'JetBrains Mono', monospace; font-size: 24px; color: #94a3b8; letter-spacing: 0px; }
-.wp-tv-work-title { font-size: 42px; line-height: 1.2; font-weight: 800; color: var(--tv-primary); margin: 8px 0 0; letter-spacing: -1.2px; }
-
-.wp-tv-status-badge {
-  padding: 18px 40px; border-radius: 24px; font-size: 22px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px;
+.animate-pulse-soft {
+  animation: pulse-soft 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
-.wp-tv-badge-approved { background: #ecfdf5; color: #059669; }
-.wp-tv-badge-pending { background: #fffbeb; color: #d97706; }
-.wp-tv-badge-expired { background: #fef2f2; color: #dc2626; }
-
-/* ─── Data Grid ─── */
-.wp-tv-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 40px 80px; width: 100%; }
-
-.wp-tv-node { display: flex; align-items: center; gap: 24px; }
-.wp-tv-node-icon { 
-  width: 64px; height: 64px; background: #f1f5f9; color: var(--tv-accent); 
-  border-radius: 18px; display: flex; align-items: center; justify-content: center; font-size: 32px;
-}
-.wp-tv-node-content label { display: block; font-size: 15px; color: #94a3b8; font-weight: 800; text-transform: uppercase; margin-bottom: 6px; }
-.wp-tv-node-content span { font-size: 22px; font-weight: 700; color: var(--tv-primary); display: block; }
-
-/* ─── Enhancements ─── */
-.wp-tv-supervisor-pill { display: flex; align-items: center; gap: 12px; margin-top: 4px; }
-.wp-tv-supervisor-pill img { width: 36px; height: 36px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-
-.wp-tv-mini-icons { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
-.wp-tv-h-badge { background: #fef2f2; color: #ef4444; padding: 4px 10px; border-radius: 8px; font-size: 12px; font-weight: 800; text-transform: uppercase; }
-.wp-tv-p-badge { background: #eff6ff; color: #3b82f6; padding: 4px 10px; border-radius: 8px; font-size: 12px; font-weight: 800; text-transform: uppercase; }
-
-.wp-tv-risk-pill { padding: 6px 16px; border-radius: 12px; font-size: 18px; font-weight: 800; }
-.wp-tv-risk-low { color: #10b981; background: #ecfdf5; }
-.wp-tv-risk-medium { color: #f59e0b; background: #fffbeb; }
-.wp-tv-risk-high { color: #ef4444; background: #fef2f2; }
-
-/* ─── Footer / Progress ─── */
-.wp-tv-footer { position: fixed; bottom: 0; left: 0; right: 0; z-index: 10; }
-.wp-tv-progress-track { height: 12px; background: #e2e8f0; width: 100%; position: relative; }
-.wp-tv-progress-bar { height: 100%; background: var(--tv-accent); transition: width 0.1s linear; box-shadow: 0 0 20px rgba(59,130,246,0.3); }
-
-.wp-tv-counter {
-  margin-top: 30px;
-  background: white; padding: 12px 36px; border-radius: 50px; font-size: 22px; font-weight: 800; color: #475569;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.08); border: 1px solid var(--tv-border);
-  display: inline-block;
-}
-
-/* ─── Animations ─── */
-.wp-tv-fade-active { opacity: 1; transform: translateY(0); }
-.wp-tv-fade-exit { opacity: 0; transform: translateY(40px); }
-
-/* ─── Empty State ─── */
-.wp-tv-empty { text-align: center; }
-.wp-tv-empty span { font-size: 160px; color: #cbd5e1; margin-bottom: 40px; }
-.wp-tv-empty h2 { font-size: 48px; color: #94a3b8; font-weight: 800; }
