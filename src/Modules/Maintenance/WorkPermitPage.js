@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import "./workpermit.css";
 import { API } from "../../Helpers/api";
+import { toast } from "react-toastify";
 
 const WORK_TYPES = ["Hot Work", "Cold Work", "Electrical", "Confined Space", "Work at Height"];
 const HAZARDS = [
@@ -16,11 +17,12 @@ const SAFETY_OFFICERS = ["Amit Varma", "Sunil Deshmukh", "Priya Singh", "Karan M
 
 
 const WorkPermitPage = () => {
-  const [activeTab, setActiveTab] = useState("history"); // Default to history table
-  const [isEditing, setIsEditing] = useState(false);
-  const [editingPermit, setEditingPermit] = useState(null);
-  const [permitId, setPermitId] = useState(`WP-${Math.floor(Math.random() * 900000 + 100000)}`);
-  const fileInputRef = React.useRef(null);
+    const [activeTab, setActiveTab] = useState("history"); // Default to history table
+    const [isEditing, setIsEditing] = useState(false);
+    const [editingPermit, setEditingPermit] = useState(null);
+    const [permitId, setPermitId] = useState(`WP-${Math.floor(Math.random() * 900000 + 100000)}`);
+    const fileInputRef = React.useRef(null);
+    const [recentVisitors, setRecentVisitors] = useState([]);
   const [form, setForm] = useState({
     title: "",
     description: "",
@@ -39,6 +41,7 @@ const WorkPermitPage = () => {
     remarks: "",
     emergencyContact: "+91 99887-76655",
     emergencyPoint: "Safety Station #04",
+    assignedApprover: "Rajesh Sharma",
   });
 
   const [workers, setWorkers] = useState([{ name: "", id: "", image: null, workerType: "Employee", company: "" }]);
@@ -115,7 +118,8 @@ const WorkPermitPage = () => {
         setForm(prev => ({
           ...prev,
           supervisor: "Rajesh Sharma",
-          safetyOfficer: "Amit Varma"
+          safetyOfficer: "Amit Varma",
+          assignedApprover: "Rajesh Sharma"
         }));
         break;
       default:
@@ -131,11 +135,19 @@ const WorkPermitPage = () => {
 
   const fetchPermits = async () => {
     try {
-      const res = await API.workpermit.getAll();
-      if (res.status) {
+      const [permitRes, visitorRes] = await Promise.all([
+        API.workpermit.getAll(),
+        API.visitorlog.getAll({ limit: 50, status: "Approved" })
+      ]);
+      
+      if (permitRes.status) {
         // Sort by date (latest first)
-        const sorted = res.data.length > 0 ? res.data.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0)) : [];
+        const sorted = permitRes.data.length > 0 ? permitRes.data.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0)) : [];
         setPermits(sorted);
+      }
+      
+      if (visitorRes.status) {
+        setRecentVisitors(visitorRes.data);
       }
     } catch (error) {
       console.error("Error fetching permits:", error);
@@ -148,8 +160,62 @@ const WorkPermitPage = () => {
   const [statusFilter, setStatusFilter] = useState("All");
   const [typeFilter, setTypeFilter] = useState("All");
 
+  const validateStep = (step) => {
+    switch (step) {
+      case 1:
+        if (!form.title?.trim() || !form.description?.trim()) {
+          toast.error("Please provide a title and work description.");
+          return false;
+        }
+        return true;
+      case 2:
+        if (!form.plant?.trim() || !form.startTime || !form.endTime) {
+          toast.error("Site location and timeline are required.");
+          return false;
+        }
+        return true;
+      case 3:
+        if (!workers.length || !workers[0].name.trim()) {
+          toast.error("At least one crew member must be added.");
+          return false;
+        }
+        return true;
+      case 4:
+        if (!hazards.length) {
+          toast.error("Safety first: Please select relevant hazards.");
+          return false;
+        }
+        return true;
+      case 5:
+        // Checklist is usually optional but encouraged, 
+        // we can let them skip if they want or require all.
+        // For now, let's keep it flexible.
+        return true;
+      default:
+        return true;
+    }
+  };
+
+  const handleNext = () => {
+    if (validateStep(activeStep)) {
+      setActiveStep(prev => Math.min(prev + 1, 6));
+      saveStep();
+    }
+  };
+
+  const handlePrev = () => {
+    setActiveStep(prev => Math.max(prev - 1, 1));
+  };
+
   const toggleSection = (id) => {
-    setActiveStep(id);
+    // Only allow jumping back, or jumping forward IF current step is valid
+    if (id < activeStep) {
+      setActiveStep(id);
+    } else if (id === activeStep + 1) {
+      if (validateStep(activeStep)) setActiveStep(id);
+    } else {
+      toast.info("Please complete current and intermediate steps first.");
+    }
   };
 
   const steps = [
@@ -228,18 +294,6 @@ const WorkPermitPage = () => {
     }
   };
 
-  const handleNext = () => {
-    if (activeStep < 6) {
-      setActiveStep(activeStep + 1);
-    }
-  };
-
-  const handlePrev = () => {
-    if (activeStep > 1) {
-      setActiveStep(activeStep - 1);
-    }
-  };
-
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setForm(prev => ({ ...prev, [name]: value }));
@@ -265,6 +319,7 @@ const WorkPermitPage = () => {
       remarks: "",
       emergencyContact: "+91 99887-76655",
       emergencyPoint: "Safety Station #04",
+      assignedApprover: "Rajesh Sharma",
     });
     setWorkers([{ name: "", id: "", image: null, workerType: "Employee", company: "" }]);
     setHazards([]);
@@ -292,6 +347,7 @@ const WorkPermitPage = () => {
       remarks: p.remarks || "",
       emergencyContact: p.emergencyContact || "+91 99887-76655",
       emergencyPoint: p.emergencyPoint || "Safety Station #04",
+      assignedApprover: p.assignedApprover || "Rajesh Sharma",
     });
     setWorkers(p.workers && Array.isArray(p.workers) && p.workers.length > 0 ? p.workers.map(w => ({ ...w, image: null, workerType: w.workerType || "Employee", company: w.company || "" })) : [{ name: "", id: "", image: null, workerType: "Employee", company: "" }]);
     setHazards(p.hazards || []);
@@ -330,9 +386,13 @@ const WorkPermitPage = () => {
             workers: workers.filter(w => w.name || w.id).map(w => ({ name: w.name, id: w.id, workerType: w.workerType, company: w.company }))
           });
           if (res.status) {
+            toast.success("Permit submitted successfully!");
             setPermits(permits.map(p => p._id === editingPermit ? res.data : p));
             setIsEditing(false);
             setEditingPermit(null);
+            setActiveTab("history");
+          } else {
+            toast.error(res.message || "Failed to submit permit.");
           }
         } else {
           const res = await API.workpermit.add({
@@ -409,7 +469,7 @@ const WorkPermitPage = () => {
             {/* 🏗️ Modern Stepper Row */}
             <div className="wp-stepper-row">
               {steps.map(s => (
-                <div key={s.id} className={`wp-step-item ${activeStep === s.id ? 'active' : ''} ${activeStep > s.id ? 'completed' : ''}`} onClick={() => setActiveStep(s.id)}>
+                <div key={s.id} className={`wp-step-item ${activeStep === s.id ? 'active' : ''} ${activeStep > s.id ? 'completed' : ''}`} onClick={() => toggleSection(s.id)}>
                   <div className="wp-step-icon">
                     <span className="material-symbols-rounded">{activeStep > s.id ? 'check' : s.icon}</span>
                   </div>
@@ -543,9 +603,31 @@ const WorkPermitPage = () => {
                               Contractor
                             </button>
                           </div>
-                          <input value={w.name} onChange={(e) => {
-                            const nw = [...workers]; nw[i].name = e.target.value; setWorkers(nw);
-                          }} placeholder="Full Name" />
+                          <div className="wp-worker-name-wrapper" style={{ position: 'relative' }}>
+                            <input value={w.name} onChange={(e) => {
+                              const nw = [...workers]; nw[i].name = e.target.value; setWorkers(nw);
+                            }} placeholder="Full Name" />
+                            {w.workerType === 'Contractor' && w.name.length > 1 && (
+                                <div className="wp-visitor-dropdown" style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 10, background: 'white', border: '1px solid #e2e8f0', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', maxHeight: '150px', overflowY: 'auto' }}>
+                                    {recentVisitors.filter(v => v.visitorName.toLowerCase().includes(w.name.toLowerCase())).map(v => (
+                                        <div key={v._id} className="wp-visitor-option" style={{ padding: '8px 12px', cursor: 'pointer', borderBottom: '1px solid #f1f5f9', fontSize: '12px' }}
+                                             onClick={() => {
+                                                 const nw = [...workers];
+                                                 nw[i].name = v.visitorName;
+                                                 nw[i].image = v.visitorImage;
+                                                 nw[i].id = v.visitorPhone || "V-LOG";
+                                                 nw[i].company = "Visitor Hub";
+                                                 setWorkers(nw);
+                                             }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <img src={v.visitorImage} style={{ width: '20px', height: '20px', borderRadius: '4px' }} alt="" />
+                                                <span>{v.visitorName} ({v.reason})</span>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                          </div>
                           <div className="wp-worker-id-row">
                             <input value={w.id} onChange={(e) => {
                               const nw = [...workers]; nw[i].id = e.target.value; setWorkers(nw);
@@ -710,6 +792,12 @@ const WorkPermitPage = () => {
                       </select>
                     </div>
                     <div className="wp-form-group">
+                      <label>Assigned Approver (Final Auth)</label>
+                      <select name="assignedApprover" value={form.assignedApprover} onChange={handleInputChange} style={{ border: '2px solid #3b82f6', background: '#eff6ff' }}>
+                        {[...SUPERVISORS, ...SAFETY_OFFICERS].map(s => <option key={s} value={s}>{s}</option>)}
+                      </select>
+                    </div>
+                    <div className="wp-form-group">
                       <label>Authorized Emergency Contact</label>
                       <input name="emergencyContact" value={form.emergencyContact} onChange={handleInputChange} />
                     </div>
@@ -810,19 +898,29 @@ const WorkPermitPage = () => {
                       <td>
                         <div className="wp-table-title clickable" onClick={() => handleEditPermit(p)}>
                           <h4>{p.title}</h4>
+                          <p>{p.description || "Routine operational safety task for site maintenance."}</p>
                         </div>
                       </td>
                       <td><span className="wp-history-type">{p.workType}</span></td>
                       <td>
-                        <div className="wp-meta-pill">
-                          <span className="material-symbols-rounded">location_on</span>
-                          {p.plant || "N/A"}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--wp-primary)', fontWeight: '700', fontSize: '13px' }}>
+                          <span className="material-symbols-rounded" style={{ fontSize: '18px', color: 'var(--wp-accent)' }}>factory</span>
+                          {p.plant || "Refinery Alpha"} 
+                          <span style={{ color: '#cbd5e1', margin: '0 4px' }}>•</span>
+                          <span style={{ fontSize: '12px', color: 'var(--wp-secondary-light)', fontWeight: '600' }}>Unit 4 • Technical Wing</span>
                         </div>
                       </td>
                       <td>
-                        <div className="wp-table-date-group">
-                          <div className="wp-meta-pill"><span className="material-symbols-rounded">schedule</span> {new Date(p.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
-                          <div className="wp-meta-pill"><span className="material-symbols-rounded">arrow_right_alt</span> {new Date(p.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', fontWeight: '800', color: 'var(--wp-primary)' }}>
+                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <span className="material-symbols-rounded" style={{ fontSize: '16px', color: 'var(--wp-success)' }}>radio_button_checked</span>
+                              {new Date(p.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                           </div>
+                           <span className="material-symbols-rounded" style={{ fontSize: '16px', color: '#94a3b8' }}>arrow_right_alt</span>
+                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--wp-secondary-light)', opacity: 0.8 }}>
+                              <span className="material-symbols-rounded" style={{ fontSize: '16px' }}>history</span>
+                              {new Date(p.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                           </div>
                         </div>
                       </td>
                       <td>

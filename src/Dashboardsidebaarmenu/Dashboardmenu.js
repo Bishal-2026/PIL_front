@@ -44,7 +44,15 @@ const Sidebar = ({ isCollapsed, setIsCollapsed, userRole = "superadmin" }) => {
   const allNavItems = [
     { label: "Dashboard", icon: "dashboard", path: "/dashboard" },
     { label: "Employees", icon: "group", path: `${basePath}/employees` },
-    { label: "Visitors", icon: "badge", path: `${basePath}/visitors` },
+    { 
+      label: "Visitors", 
+      icon: "badge", 
+      path: `${basePath}/visitors`,
+      sublinks: [
+        { label: "Visitor List", path: `${basePath}/visitors` },
+        { label: "Analytics", path: `${basePath}/visitor-analytics` },
+      ]
+    },
     { label: "Users", icon: "person", path: `/dashboard/users` },
     { label: "Attendance", icon: "event", path: `${basePath}/attendance` },
     // { label: "Contractors", icon: "badge", path: `${basePath}/contractor` },
@@ -57,7 +65,17 @@ const Sidebar = ({ isCollapsed, setIsCollapsed, userRole = "superadmin" }) => {
     { label: "Notifications", icon: "notifications", path: `${basePath}/notifications` },
     { label: "Enquiries", icon: "mail", path: "/dashboard/enquiries" },
     { label: "Warnings", icon: "warning", path: "/dashboard/warnings" },
-    { label: "Maintenance", icon: "build_circle", path: "/dashboard/maintenance" }
+    { label: "Maintenance", icon: "build_circle", path: "/dashboard/maintenance" },
+    { 
+      label: "Work Permits", 
+      icon: "task", 
+      path: "/work-permit",
+      sublinks: [
+        { label: "Apply Permit", path: "/work-permit" },
+        { label: "Permit Approvals", path: "/permit-approvals" },
+        { label: "Public TV Display", path: "/permit-display" },
+      ]
+    }
 
   ];
 
@@ -79,6 +97,7 @@ const Sidebar = ({ isCollapsed, setIsCollapsed, userRole = "superadmin" }) => {
       "Enquiries",
       "Warnings",
       "Maintenance",
+      "Work Permits",
     ],
     admin: [
       "Dashboard",
@@ -93,6 +112,7 @@ const Sidebar = ({ isCollapsed, setIsCollapsed, userRole = "superadmin" }) => {
       "Enquiries",
       "Warnings",
       "Maintenance",
+      "Work Permits",
     ],
     hr: [
       "Dashboard",
@@ -107,6 +127,7 @@ const Sidebar = ({ isCollapsed, setIsCollapsed, userRole = "superadmin" }) => {
       "Enquiries",
       "Warnings",
       "Maintenance",
+      "Work Permits",
     ],
     manager: [
       "Dashboard",
@@ -116,9 +137,10 @@ const Sidebar = ({ isCollapsed, setIsCollapsed, userRole = "superadmin" }) => {
       "Settings",
       "Location",
       "Activity",
+      "Work Permits",
     ],
-    supervisor: ["Dashboard", "Employees", "Visitors", "Attendance"],
-    employee: ["Dashboard"],
+    supervisor: ["Dashboard", "Employees", "Visitors", "Attendance", "Work Permits"],
+    employee: ["Dashboard", "Visitors", "Work Permits"],
     contractor: ["Dashboard"],
   };
 

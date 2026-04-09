@@ -7,6 +7,7 @@ import { API, deleteData, putData } from "../../../Helpers/api.js";
 import { useUser } from "../../../Helpers/Context/UserContext.js";
 import { capitalizeFirstLetter } from "../../../Helpers/CapitalizeFirstLetter.js";
 import { can, normalizeRole } from "../../../Helpers/acl.js";
+import { User, Clock, MapPin, CheckCircle, UserCheck, MessageSquare, Mail, Phone, Calendar, X } from "lucide-react";
 
 const normalizeSessionStatus = (value) => String(value || "").trim().toLowerCase();
 const isLoggedOutStatus = (value) => {
@@ -32,6 +33,8 @@ const VisitorsList = () => {
   const [totalRows, setTotalRows] = useState(0);
   const [searchTerm, setSearchTerm] = useState("");
   const [sessionFilter, setSessionFilter] = useState("");
+  const [selectedVisitor, setSelectedVisitor] = useState(null);
+  const [showModal, setShowModal] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const basePath = location.pathname.includes("/dashboard/employee")
@@ -42,16 +45,15 @@ const VisitorsList = () => {
     setLoading(true);
     setError("");
     try {
-      const response = await API.getVisitors(searchTerm, currentPage, rowsPerPage, {
-        sessionStatus: sessionFilter || undefined,
+      const response = await API.visitorlog.getAll({
+        search: searchTerm,
+        page: currentPage,
+        limit: rowsPerPage,
+        status: ["Approved", "CheckedIn", "CheckedOut"] 
       });
-      if (Array.isArray(response.visitors)) {
-        setData(response.visitors);
-        setTotalRows(
-          response.total ??
-          response.pagination?.totalrecords ??
-          response.visitors.length
-        );
+      if (Array.isArray(response.data)) {
+        setData(response.data);
+        setTotalRows(response.total || response.data.length);
       } else {
         setError("No visitor data found");
       }
@@ -83,17 +85,37 @@ const VisitorsList = () => {
   };
 
   const statusBadge = (status) => {
-    const normalized = String(status || "").toLowerCase();
-    const isLoggedIn = normalized === "logged in";
-    const label = isLoggedIn ? "Online" : "Offline";
+    const s = String(status || "Approved").toLowerCase();
+    
+    if (s === "pending") {
+      return (
+        <span className="px-3 py-1 rounded-full font-bold text-[10px] uppercase tracking-widest border-2 bg-amber-100 text-amber-700 border-amber-200">
+          Pending
+        </span>
+      );
+    }
+    
+    if (s === "declined") {
+      return (
+        <span className="px-3 py-1 rounded-full font-bold text-[10px] uppercase tracking-widest border-2 bg-rose-100 text-rose-700 border-rose-200">
+          Declined
+        </span>
+      );
+    }
+
+    let config = { label: "Authorized", className: "bg-blue-100 text-blue-700 border-blue-200" };
+    
+    if (s === "checkedin" || s === "checked in") {
+      config = { label: "Checked In", className: "bg-green-100 text-green-700 border-green-200" };
+    } else if (s === "checkedout" || s === "checked out") {
+      config = { label: "Checked Out", className: "bg-gray-100 text-gray-700 border-gray-200" };
+    } else if (s === "approved") {
+      config = { label: "Approved", className: "bg-emerald-100 text-emerald-700 border-emerald-200" };
+    }
+    
     return (
-      <span
-        className={`px-3 py-0.5 rounded-lg font-medium text-sm ${isLoggedIn
-          ? "bg-green-100 text-green-800 border border-green-300"
-          : "bg-red-100 text-red-600 border border-red-300"
-          }`}
-      >
-        {label}
+      <span className={`px-3 py-1 rounded-full font-bold text-[10px] uppercase tracking-widest border-2 ${config.className}`}>
+        {config.label}
       </span>
     );
   };
@@ -145,6 +167,11 @@ const VisitorsList = () => {
     }
   };
 
+  const openVisitorDetails = (row) => {
+    setSelectedVisitor(row);
+    setShowModal(true);
+  };
+
   const openUserOverview = (row, sectionId = "") => {
     const id = row?.employeeId || row?.id || row?._id;
     if (!id) return;
@@ -167,23 +194,25 @@ const VisitorsList = () => {
 
   const mobileColumns = [
     {
-      name: "Name",
+      name: "Visitor",
       selector: (row) => {
-        const name = capitalizeFirstLetter(row.name || "-");
+        const name = capitalizeFirstLetter(row.name || row.visitorName || "-");
+        const vid = row.visitorId || "Pending";
         return (
-          <button
-            type="button"
-            onClick={() => openUserOverview(row, "details")}
-            className="font-bold text-[#22374E] hover:underline whitespace-nowrap"
-          >
-            {name}
-          </button>
+          <div className="flex flex-col">
+            <button
+              type="button"
+              onClick={() => openVisitorDetails(row)}
+              className="font-bold text-[#22374E] hover:underline whitespace-nowrap text-left"
+            >
+              {name}
+            </button>
+            <span className="text-[9px] font-black text-indigo-600 uppercase tracking-tighter leading-none mt-1">
+              ID: {vid}
+            </span>
+          </div>
         );
       },
-    },
-    {
-      name: "Employee ID",
-      selector: (row) => row.employeeId || row._id || "-",
     },
     {
       name: "Location",
@@ -240,63 +269,62 @@ const VisitorsList = () => {
 
   const columns = [
     {
-      name: "Name / Employee ID",
-      selector: (row) => {
-        const name = capitalizeFirstLetter(row.name || "-");
-        const empId = row.employeeId || row._id || "-";
-        return (
-          <button
-            type="button"
-            onClick={() => openUserOverview(row, "details")}
-            className="block text-left whitespace-normal leading-tight w-full p-0 m-0 border-none bg-transparent"
-            title="View details"
-            style={{ textAlign: "left" }}
-          >
-            <div
-              className="flex flex-col items-start text-left p-0 m-0 w-full"
-              style={{ textAlign: 'left' }}
-            >
-              <span className="font-bold text-[#22374e] text-base leading-tight hover:underline text-nowrap">
-                {name}
-              </span>
-              <span className="text-xs text-gray-500 font-bold uppercase mt-1 leading-none">
-                {empId}
-              </span>
-            </div>
-          </button>
-        );
-      },
-      width: "20%",
-    },
-    {
-      name: "Location",
-      selector: (row) => row.location || "-",
+      name: "Visitor ID",
+      selector: (row) => (
+        <span className="font-black text-indigo-600 text-xs tracking-tighter uppercase">
+          {row.visitorId || "Pending"}
+        </span>
+      ),
       width: "15%",
     },
     {
-      name: "Device",
+      name: "Visit Details",
       selector: (row) => {
-        const dId = row.deviceId || "-";
-        const empId = row.employeeId || row._id || row.id;
-        const isLoggedIn = String(row.sessionStatus || "").toLowerCase() === "logged in";
+        const name = capitalizeFirstLetter(row.name || row.visitorName || "-");
+        const hostName = row.employeeName || "Unknown Host";
+        const hostId = row.employeeId || "-";
+        const time = row.timeSlot || "Not specified";
+        const remark = row.remark || row.reason || "";
+        
         return (
-          <div className="flex flex-col items-start text-left">
-            {dId !== "-" ? (
-              <button
-                onClick={() => navigate(`/dashboard/users/device?employeeId=${encodeURIComponent(String(empId))}`)}
-                className="text-[#22374e] hover:underline font-bold text-sm leading-tight text-nowrap"
-              >
-                {dId}
-              </button>
-            ) : (
-              <span className="text-gray-400 font-bold text-sm">-</span>
-            )}
-            <span className={`text-[10px] font-bold uppercase mt-1 leading-none ${isLoggedIn ? 'text-green-600' : 'text-red-500'}`}>
-              {isLoggedIn ? "Online" : "Offline"}
+          <div className="py-1 flex flex-col min-w-[180px]">
+            <span className="font-bold text-[#1e293b] text-sm leading-none mb-1">
+              {name}
             </span>
+            <div className="flex items-center gap-2 text-[9px] uppercase font-black text-indigo-600/70 tracking-tighter">
+                <span>HOST: {hostName}</span>
+                <span className="text-gray-300">|</span>
+                <span className="text-orange-500 flex items-center gap-1"><Clock size={10} /> {time}</span>
+            </div>
+            {remark && (
+              <p className="text-[10px] text-gray-400 font-medium italic truncate mt-0.5 line-clamp-1">
+                "{remark}"
+              </p>
+            )}
           </div>
         );
       },
+      width: "40%",
+    },
+    {
+      name: "Status",
+      selector: (row) => (
+        <div className="flex flex-col items-start scale-90 -ml-2">
+            {statusBadge(row.status)}
+            <span className="text-[8px] font-bold text-gray-300 uppercase tracking-widest mt-1">
+                {formatDate(row.visitDate).split(',')[0]}
+            </span>
+        </div>
+      ),
+      width: "12%",
+    },
+    {
+      name: "Location",
+      selector: (row) => (
+        <div className="flex flex-col">
+            <span className="font-bold text-gray-700 text-xs">{row.location || "-"}</span>
+        </div>
+      ),
       width: "15%",
     },
     ...(canManageVisitors || canForceLogoutVisitors
@@ -468,6 +496,141 @@ const VisitorsList = () => {
           />
         )}
       </div>
+
+      {/* 🟢 Visitor Details Modal */}
+      {showModal && selectedVisitor && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-white w-full max-w-2xl rounded-[2rem] shadow-2xl overflow-hidden relative animate-in zoom-in-95 duration-300">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-[#22374e] to-[#123b5d] p-8 text-white relative">
+              <button 
+                onClick={() => setShowModal(false)}
+                className="absolute top-6 right-6 w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-all"
+              >
+                <X size={20} />
+              </button>
+              <div className="flex items-center gap-6">
+                <div className="w-24 h-24 rounded-2xl bg-white p-1 shadow-lg">
+                  {selectedVisitor.visitorImage ? (
+                    <img 
+                      src={selectedVisitor.visitorImage} 
+                      alt="Visitor" 
+                      className="w-full h-full object-cover rounded-xl"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-indigo-50 flex items-center justify-center text-[#22374e] rounded-xl font-bold text-3xl">
+                      {selectedVisitor.visitorName?.charAt(0) || "V"}
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <h2 className="text-3xl font-black tracking-tight">{selectedVisitor.visitorName}</h2>
+                  <div className="flex items-center gap-2 mt-2 opacity-90">
+                    <span className="px-3 py-1 bg-white/20 rounded-lg text-xs font-black uppercase tracking-widest">
+                      {selectedVisitor.visitorId}
+                    </span>
+                    <span className="px-3 py-1 bg-green-500/30 border border-green-500/50 rounded-lg text-xs font-black uppercase tracking-widest flex items-center gap-1">
+                      <CheckCircle size={12} /> Approved
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Body */}
+            <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-8 bg-gray-50/50">
+              {/* Visit Details */}
+              <div className="space-y-6">
+                <h3 className="text-xs font-black uppercase tracking-[0.2em] text-gray-400 border-b border-gray-100 pb-2">Visit Intelligence</h3>
+                
+                <div className="flex items-start gap-4 grow">
+                  <div className="w-10 h-10 rounded-xl bg-orange-100 flex items-center justify-center text-orange-600 shrink-0">
+                    <Clock size={20} />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Visit Time</p>
+                    <p className="text-sm font-bold text-gray-800">{selectedVisitor.timeSlot || "Not specified"}</p>
+                    <p className="text-[10px] text-gray-500 font-medium">Date: {formatDate(selectedVisitor.visitDate)}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-4">
+                  <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center text-blue-600 shrink-0">
+                    <UserCheck size={20} />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Host Employee</p>
+                    <p className="text-sm font-bold text-gray-800">{selectedVisitor.employeeName || "Not assigned"}</p>
+                    <p className="text-[10px] text-gray-500 font-medium">Dept: Maintenance / Operations</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-4">
+                  <div className="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center text-purple-600 shrink-0">
+                    <CheckCircle size={20} />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Approved By</p>
+                    <p className="text-sm font-bold text-[#1e293b]">{selectedVisitor.approvedBy || "Administrator"}</p>
+                    <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Authorized Site Admin</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Personal Details */}
+              <div className="space-y-6">
+                <h3 className="text-xs font-black uppercase tracking-[0.2em] text-gray-400 border-b border-gray-100 pb-2">Identification</h3>
+                
+                <div className="flex items-start gap-4">
+                  <div className="w-10 h-10 rounded-xl bg-indigo-100 flex items-center justify-center text-indigo-600 shrink-0">
+                    <Mail size={20} />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Email Address</p>
+                    <p className="text-sm font-bold text-gray-800 break-all">{selectedVisitor.visitorEmail || "No email"}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-4">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-600 shrink-0">
+                    <Phone size={20} />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Phone Contact</p>
+                    <p className="text-sm font-bold text-gray-800">{selectedVisitor.visitorPhone || "Not provided"}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-4">
+                  <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center text-gray-600 shrink-0">
+                    <MessageSquare size={20} />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Visit Remark</p>
+                    <p className="text-sm font-bold text-gray-600 italic">"{selectedVisitor.remark || "Regular Visit"}"</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="p-6 bg-white border-t border-gray-100 flex justify-end gap-3">
+              <button 
+                onClick={() => setShowModal(false)}
+                className="px-6 py-2 rounded-xl bg-gray-100 text-gray-700 font-black uppercase tracking-widest text-xs hover:bg-gray-200 transition-all"
+              >
+                Close Profile
+              </button>
+              <button 
+                onClick={() => window.print()}
+                className="px-6 py-2 rounded-xl bg-[#22374e] text-white font-black uppercase tracking-widest text-xs hover:shadow-lg transition-all"
+              >
+                Print Report
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

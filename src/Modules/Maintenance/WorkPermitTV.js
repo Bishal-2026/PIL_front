@@ -29,13 +29,9 @@ const WorkPermitTV = () => {
 
    const fetchData = async () => {
       try {
-         const res = await API.workpermit.getAll();
+         const res = await API.workpermit.getPublic();
          if (res.status) {
-            const today = new Date().toDateString();
-            const liveData = res.data.filter(p => {
-               const pDate = new Date(p.date || p.startTime).toDateString();
-               return (pDate === today || p.status === 'Pending') && p.status === 'Pending';
-            }).map(p => ({
+            const liveData = res.data.map(p => ({
                ...p,
                permitId: p.permitId || p.id,
                startTimeDisplay: new Date(p.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),

@@ -29,6 +29,8 @@ import WorkPermitPage from "./Modules/Maintenance/WorkPermitPage.js";
 import WorkPermitTV from "./Modules/Maintenance/WorkPermitTV.js";
 import WorkPermitApproval from "./Modules/Maintenance/WorkPermitApproval.js";
 import TechnicianPortalPage from "./Modules/Maintenance/TechnicianPortalPage.js";
+import VisitorRegistration from "./Modules/Users/Visitors/VisitorRegistration.js";
+import GatePassPage from "./Modules/Users/Visitors/GatePassPage.js";
 
 // App Modes
 import FullApp from "./AppModes/FullApp.js";
@@ -106,6 +108,8 @@ const AppRoutes = () => {
       <Route path="/permit-display" element={<WorkPermitTV />} />
       <Route path="/permit-approvals" element={<WorkPermitApproval />} />
       <Route path="/technician-portal" element={<TechnicianPortalPage />} />
+      <Route path="/visitor-registration" element={<VisitorRegistration />} />
+      <Route path="/gate-pass" element={<GatePassPage />} />
       <Route path="*" element={<NotFound />} />
 
     </Routes>

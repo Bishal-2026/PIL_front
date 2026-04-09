@@ -21,6 +21,7 @@ import Visitors from "../Modules/Users/Visitors/List";
 import AddVisitor from "../Modules/Users/Visitors/Add";
 import EditVisitor from "../Modules/Users/Visitors/Edit";
 import UserOverview from "../Modules/Users/UserOverview.js";
+import VisitorDashboard from "../Modules/Users/Visitors/VisitorDashboard.js";
 import ActivityPgae from "../Modules/Users/ActivityPgae.js";
 import Fields from "../Modules/Settings/Fields/Fieldlist";
 import LocationList from "../Modules/Employee/Location/List.js";
@@ -88,6 +89,7 @@ function DashboardLayout({ userRole }) {
               <Route path="users/visitors/add" element={<AddVisitor />} />
               <Route path="users/visitors/edit/:id" element={<EditVisitor />} />
               <Route path="users/roles" element={<Roles />} />
+              <Route path="users/visitor-analytics" element={<VisitorDashboard />} />
               <Route path="users/permissions" element={<PermissionsTable />} />
 
               {/* ✅ Aliases for legacy /dashboard/employee/... paths */}

@@ -165,6 +165,7 @@ const MaintenancePage = () => {
   const [showRemarkModal, setShowRemarkModal] = useState(false);
   const [remarkInput, setRemarkInput] = useState("");
   const [selectedTicket, setSelectedTicket] = useState(null);
+  const [visitorLogs, setVisitorLogs] = useState([]);
   const [filterStatus, setFilterStatus] = useState("All");
   const [searchText, setSearchText] = useState("");
   const [animIn, setAnimIn] = useState(false);
@@ -201,10 +202,11 @@ const MaintenancePage = () => {
   const fetchData = async (isSilent = false) => {
     try {
       if (!isSilent) setLoading(true);
-      const [ticketsRes, machinesRes, techsRes] = await Promise.all([
+      const [ticketsRes, machinesRes, techsRes, visitorRes] = await Promise.all([
         API.maintenance.getTickets(),
         API.maintenance.getMachines(),
-        API.maintenance.getTechnicians()
+        API.maintenance.getTechnicians(),
+        API.visitorlog.getAll({ limit: 100 })
       ]);
       
       if (ticketsRes.status) {
@@ -214,6 +216,7 @@ const MaintenancePage = () => {
       }
       if (machinesRes.status) setMachines(machinesRes.data.length > 0 ? machinesRes.data : INITIAL_MACHINES);
       if (techsRes.status) setTechnicians(techsRes.data);
+      if (visitorRes.status) setVisitorLogs(visitorRes.data);
     } catch (error) {
       console.error("Error fetching maintenance data:", error);
     } finally {
@@ -463,6 +466,7 @@ const MaintenancePage = () => {
         <div className="mnt-kpi-card mnt-kpi-yellow"><div className="mnt-kpi-top"><div><p className="mnt-kpi-label">In Progress</p><h2 className="mnt-kpi-value">{inProgress}</h2><p className="mnt-kpi-sub">Under repair</p></div><span className="material-symbols-rounded mnt-kpi-icon">construction</span></div><Sparkline data={[2, 1, 3, 2, 4, 3, 2, 3, 4, 3, 2, inProgress || 1]} color="#f59e0b" /></div>
         <div className="mnt-kpi-card mnt-kpi-green"><div className="mnt-kpi-top"><div><p className="mnt-kpi-label">Resolved</p><h2 className="mnt-kpi-value">{resolved}</h2><p className="mnt-kpi-sub">Verified closed</p></div><span className="material-symbols-rounded mnt-kpi-icon">check_circle</span></div><Sparkline data={[2, 3, 2, 4, 3, 5, 4, 6, 5, 4, 3, resolved || 1]} color="#22c55e" /></div>
         <div className="mnt-kpi-card mnt-kpi-red"><div className="mnt-kpi-top"><div><p className="mnt-kpi-label">Critical</p><h2 className="mnt-kpi-value">{criticalCount}</h2><p className="mnt-kpi-sub">Urgent attention</p></div><span className="material-symbols-rounded mnt-kpi-icon">warning</span></div><Sparkline data={[0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, criticalCount || 0]} color="#dc2626" /></div>
+        <div className="mnt-kpi-card mnt-kpi-indigo" style={{ background: '#e0e7ff', color: '#3730a3' }}><div className="mnt-kpi-top"><div><p className="mnt-kpi-label">External Staff</p><h2 className="mnt-kpi-value">{visitorLogs.filter(v => ['Approved', 'CheckedIn'].includes(v.status)).length}</h2><p className="mnt-kpi-sub">Active visitors</p></div><span className="material-symbols-rounded mnt-kpi-icon">group</span></div><Sparkline data={[4, 2, 5, 8, 4, 3]} color="#4f46e5" /></div>
         <div className="mnt-kpi-card mnt-kpi-purple"><div className="mnt-kpi-top"><div><p className="mnt-kpi-label">Resolution</p><h2 className="mnt-kpi-value">{avgResolutionHours}h</h2><p className="mnt-kpi-sub">Avg MTTR</p></div><span className="material-symbols-rounded mnt-kpi-icon">timer</span></div><Sparkline data={[6, 5, 7, 4, 5, 6, 4, 5, 4, 4, 5, 5]} color="#8b5cf6" /></div>
       </div>
 
@@ -689,7 +693,7 @@ const MaintenancePage = () => {
         <>
           {/* ── Tabs ── */}
           <div className="mnt-tabs">
-            {["overview", "tickets", "machines", "performance"].map(tab => (
+            {["overview", "tickets", "machines", "performance", "visitors"].map(tab => (
               <button key={tab} className={`mnt-tab ${activeTab === tab ? "mnt-tab-active" : ""}`} onClick={() => setActiveTab(tab)}>{tab.charAt(0).toUpperCase() + tab.slice(1)}</button>
             ))}
           </div>
@@ -896,6 +900,58 @@ const MaintenancePage = () => {
                     </div>
                     <p className="mnt-metric-desc">Equipment Effectiveness</p>
                   </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ══════ VISITORS TAB ══════ */}
+          {activeTab === "visitors" && (
+            <div className="mnt-tab-content">
+              <div className="mnt-chart-card">
+                <div className="mnt-card-header">
+                    <h3 className="mnt-chart-title"><span className="material-symbols-rounded">group</span> External Resource Tracking</h3>
+                    <p className="text-sm text-slate-400">Approved maintenance visitors currently on-site.</p>
+                </div>
+                <div className="mnt-log-table-wrap">
+                  <table className="mnt-log-table">
+                    <thead>
+                      <tr>
+                        <th>NAME</th>
+                        <th>VISITING</th>
+                        <th>REASON</th>
+                        <th>STATUS</th>
+                        <th>ARRIVAL</th>
+                        <th>PHOTO</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {visitorLogs.map(v => (
+                        <tr key={v._id}>
+                          <td className="font-bold">{v.visitorName}</td>
+                          <td>{v.employeeName}</td>
+                          <td>{v.reason}</td>
+                          <td>
+                            <span className="mnt-status-pill" style={{ 
+                                background: v.status === 'Approved' ? '#f0fdf4' : v.status === 'Pending' ? '#fff7ed' : '#f1f5f9',
+                                color: v.status === 'Approved' ? '#166534' : v.status === 'Pending' ? '#c2410c' : '#64748b',
+                                padding: '4px 10px',
+                                borderRadius: '6px',
+                                fontSize: '11px',
+                                fontWeight: '800'
+                            }}>{v.status}</span>
+                          </td>
+                          <td className="mnt-time-cell">{new Date(v.createdAt).toLocaleString()}</td>
+                          <td>
+                            {v.visitorImage && <img src={v.visitorImage} style={{ width: '32px', height: '32px', borderRadius: '4px', objectFit: 'cover' }} alt="" />}
+                          </td>
+                        </tr>
+                      ))}
+                      {visitorLogs.length === 0 && (
+                          <tr><td colSpan="6" className="mnt-no-records">No visitor activity recorded.</td></tr>
+                      )}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             </div>

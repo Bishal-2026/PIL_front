@@ -8,10 +8,12 @@ import {
   ChevronRight, RotateCcw, Layers
 } from "lucide-react";
 import { API } from "../../Helpers/api";
+import { useUser } from "../../Helpers/Context/UserContext";
 import { motion, AnimatePresence } from "framer-motion";
 import "./workpermit.css"; // Reuse existing styles
 
 const WorkPermitApproval = () => {
+    const { user } = useUser();
     const [permits, setPermits] = useState([]);
     const [loading, setLoading] = useState(true);
     const [selectedPermit, setSelectedPermit] = useState(null);
@@ -21,7 +23,16 @@ const WorkPermitApproval = () => {
     const fetchPermits = async () => {
         setLoading(true);
         try {
-            const res = await API.workpermit.getAll();
+            const userName = user?.name || user?.firstName;
+            const userRole = user?.role?.toLowerCase();
+            
+            // Fetch ALL permits assigned or global (removed hardcoded status: "Pending")
+            let queryParams = {};
+            if (userRole !== "superadmin" && userRole !== "admin") {
+                queryParams.assignedApprover = userName || "Rajesh Sharma";
+            }
+
+            const res = await API.workpermit.getAll(queryParams);
             if (res.status) {
                 setPermits(res.data || []);
             }
@@ -33,12 +44,12 @@ const WorkPermitApproval = () => {
     };
 
     useEffect(() => {
-        fetchPermits();
-    }, []);
+        if (user) fetchPermits();
+    }, [user]);
 
     const handleAction = async (id, status) => {
         try {
-            const res = await API.workpermit.update(id, { status });
+            const res = await API.workpermit.updateStatus(id, { status });
             if (res.status) {
                 fetchPermits();
                 setSelectedPermit(null);
@@ -78,8 +89,11 @@ const WorkPermitApproval = () => {
                     </div>
 
                     <div className="flex gap-4">
-                         <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-4 px-8">
-                             <div className="w-10 h-10 bg-orange-50 rounded-xl flex items-center justify-center text-orange-600 font-black">
+                         <div 
+                            className={`p-4 rounded-2xl shadow-sm border flex items-center gap-4 px-8 cursor-pointer transition-all ${filterStatus === 'Pending' ? 'bg-orange-50 border-orange-200 shadow-md' : 'bg-white border-slate-100'}`}
+                            onClick={() => setFilterStatus('Pending')}
+                         >
+                             <div className="w-10 h-10 bg-orange-100/50 rounded-xl flex items-center justify-center text-orange-600 font-black">
                                 {stats.pending}
                              </div>
                              <div>
@@ -87,8 +101,11 @@ const WorkPermitApproval = () => {
                                 <p className="text-sm font-black text-slate-700">Pending</p>
                              </div>
                          </div>
-                         <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-4 px-8">
-                             <div className="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center text-emerald-600 font-black">
+                         <div 
+                            className={`p-4 rounded-2xl shadow-sm border flex items-center gap-4 px-8 cursor-pointer transition-all ${filterStatus === 'Approved' ? 'bg-emerald-50 border-emerald-200 shadow-md' : 'bg-white border-slate-100'}`}
+                            onClick={() => setFilterStatus('Approved')}
+                         >
+                             <div className="w-10 h-10 bg-emerald-100/50 rounded-xl flex items-center justify-center text-emerald-600 font-black">
                                 {stats.approved}
                              </div>
                              <div>

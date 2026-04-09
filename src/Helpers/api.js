@@ -273,10 +273,20 @@ const API = {
 
   workpermit: {
     getAll: (params = {}) => getData("/workpermit/all", params),
+    getPublic: () => getData("/workpermit/public"),
     getById: (id) => getData(`/workpermit/${id}`),
     add: (data) => postData("/workpermit", data),
     update: (id, data) => putData(`/workpermit/${id}`, data),
+    updateStatus: (id, statusData) => makeRequest("patch", `/workpermit/${id}/status`, statusData),
     remove: (id) => deleteData(`/workpermit/${id}`),
+  },
+
+  visitorlog: {
+    getAll: (params = {}) => getData("/visitorlogs", params),
+    getById: (id) => getData(`/visitorlogs/${id}`),
+    getStats: () => getData("/visitorlogs/stats"),
+    register: (data) => postData("/visitorlogs/register", data),
+    updateStatus: (id, statusData) => makeRequest("patch", `/visitorlogs/${id}/status`, statusData),
   },
 };
 
