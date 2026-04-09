@@ -140,13 +140,13 @@ const GatePassPage = () => {
               <div className="space-y-4">
                 <div className="group">
                   <label className="text-xs font-bold text-gray-400 uppercase tracking-widest block mb-2">Visitor Name</label>
-                  <input className="w-full px-5 py-4 bg-gray-50 border-0 rounded-2xl focus:ring-4 focus:ring-indigo-50 outline-none text-lg font-bold" 
-                    placeholder="Enter full name" value={formData.visitorName} onChange={e => setFormData({...formData, visitorName: e.target.value})} />
+                  <input className="w-full px-5 py-4 bg-gray-50 border-0 rounded-2xl focus:ring-4 focus:ring-indigo-50 outline-none text-lg font-bold"
+                    placeholder="Enter full name" value={formData.visitorName} onChange={e => setFormData({ ...formData, visitorName: e.target.value })} />
                 </div>
                 <div className="group">
-                    <label className="text-xs font-bold text-gray-400 uppercase tracking-widest block mb-2">Email Address</label>
-                    <input className="w-full px-5 py-4 bg-gray-50 border-0 rounded-2xl focus:ring-4 focus:ring-indigo-50 outline-none text-lg font-bold" 
-                      placeholder="visitor@example.com" value={formData.visitorEmail} onChange={e => setFormData({...formData, visitorEmail: e.target.value})} />
+                  <label className="text-xs font-bold text-gray-400 uppercase tracking-widest block mb-2">Email Address</label>
+                  <input className="w-full px-5 py-4 bg-gray-50 border-0 rounded-2xl focus:ring-4 focus:ring-indigo-50 outline-none text-lg font-bold"
+                    placeholder="visitor@example.com" value={formData.visitorEmail} onChange={e => setFormData({ ...formData, visitorEmail: e.target.value })} />
                 </div>
               </div>
             </div>
@@ -154,15 +154,15 @@ const GatePassPage = () => {
 
           {step === 2 && (
             <div className="space-y-6 animate-in fade-in slide-in-from-right-4">
-              <input className="w-full px-5 py-4 bg-gray-50 border-0 rounded-2xl focus:ring-4 focus:ring-indigo-50 outline-none text-md font-medium" 
+              <input className="w-full px-5 py-4 bg-gray-50 border-0 rounded-2xl focus:ring-4 focus:ring-indigo-50 outline-none text-md font-medium"
                 placeholder="Search Host Employee..." onChange={e => fetchEmployees(e.target.value)} />
               <div className="space-y-2 max-h-[250px] overflow-y-auto pr-2">
                 {employees.map(emp => (
-                  <div key={emp.employeeId} onClick={() => setFormData({...formData, employeeId: emp.employeeId, employeeName: emp.name})}
-                       className={`p-4 rounded-2xl flex items-center justify-between cursor-pointer border-2 transition-all ${formData.employeeId === emp.employeeId ? "border-indigo-600 bg-indigo-50" : "border-transparent bg-gray-50 hover:bg-gray-100"}`}>
+                  <div key={emp.employeeId} onClick={() => setFormData({ ...formData, employeeId: emp.employeeId, employeeName: emp.name })}
+                    className={`p-4 rounded-2xl flex items-center justify-between cursor-pointer border-2 transition-all ${formData.employeeId === emp.employeeId ? "border-indigo-600 bg-indigo-50" : "border-transparent bg-gray-50 hover:bg-gray-100"}`}>
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center font-bold text-indigo-600 shadow-sm">{emp.name[0]}</div>
-                        <div><p className="font-bold text-gray-900">{emp.name}</p><p className="text-xs text-gray-400">{emp.department}</p></div>
+                      <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center font-bold text-indigo-600 shadow-sm">{emp.name[0]}</div>
+                      <div><p className="font-bold text-gray-900">{emp.name}</p><p className="text-xs text-gray-400">{emp.department}</p></div>
                     </div>
                     {formData.employeeId === emp.employeeId && <CheckCircle className="text-indigo-600" size={20} />}
                   </div>
@@ -181,7 +181,7 @@ const GatePassPage = () => {
                 {!formData.visitorImage ? (
                   <button onClick={captureImage} className="w-16 h-16 bg-indigo-600 text-white rounded-full flex items-center justify-center shadow-lg shadow-indigo-200 hover:scale-110 active:scale-95 transition-all"><Camera size={28} /></button>
                 ) : (
-                  <button onClick={() => { setFormData({...formData, visitorImage: ""}); startCamera(); }} className="px-6 py-2 bg-gray-900 text-white rounded-full text-xs font-bold uppercase tracking-widest">Retake</button>
+                  <button onClick={() => { setFormData({ ...formData, visitorImage: "" }); startCamera(); }} className="px-6 py-2 bg-gray-900 text-white rounded-full text-xs font-bold uppercase tracking-widest">Retake</button>
                 )}
               </div>
             </div>
@@ -192,45 +192,45 @@ const GatePassPage = () => {
               <div>
                 <label className="text-xs font-bold text-gray-400 uppercase tracking-widest block mb-4">Select Time Slot</label>
                 <div className="grid grid-cols-2 gap-3">
-                    {timeSlots.map(slot => (
-                        <button key={slot} onClick={() => setFormData({...formData, timeSlot: slot})}
-                          className={`p-3 rounded-xl border-2 font-bold text-xs transition-all ${formData.timeSlot === slot ? "border-indigo-600 bg-indigo-600 text-white" : "border-gray-100 text-gray-600 hover:border-indigo-200"}`}>
-                            {slot}
-                        </button>
-                    ))}
+                  {timeSlots.map(slot => (
+                    <button key={slot} onClick={() => setFormData({ ...formData, timeSlot: slot })}
+                      className={`p-3 rounded-xl border-2 font-bold text-xs transition-all ${formData.timeSlot === slot ? "border-indigo-600 bg-indigo-600 text-white" : "border-gray-100 text-gray-600 hover:border-indigo-200"}`}>
+                      {slot}
+                    </button>
+                  ))}
                 </div>
               </div>
               <div className="pt-4">
                 <label className="text-xs font-bold text-gray-400 uppercase tracking-widest block mb-2">Visit Remark</label>
-                <textarea rows="3" className="w-full px-5 py-4 bg-gray-50 border-0 rounded-2xl focus:ring-4 focus:ring-indigo-50 outline-none text-md font-medium" 
-                  placeholder="Reason or additional info..." value={formData.remark} onChange={e => setFormData({...formData, remark: e.target.value})} />
+                <textarea rows="3" className="w-full px-5 py-4 bg-gray-50 border-0 rounded-2xl focus:ring-4 focus:ring-indigo-50 outline-none text-md font-medium"
+                  placeholder="Reason or additional info..." value={formData.remark} onChange={e => setFormData({ ...formData, remark: e.target.value })} />
               </div>
             </div>
           )}
 
           {step === 5 && (
             <div className="space-y-8 animate-in fade-in">
-                <div className="bg-indigo-600 rounded-3xl p-6 text-white relative overflow-hidden shadow-xl shadow-indigo-100">
-                    <div className="relative z-10 flex items-center gap-4">
-                        <img src={formData.visitorImage || "/visitor_placeholder.png"} className="w-20 h-20 rounded-2xl object-cover border-4 border-white/20" />
-                        <div>
-                            <p className="text-xs uppercase tracking-widest font-bold text-white/70">Gate Pass Preview</p>
-                            <h2 className="text-xl font-black">{formData.visitorName}</h2>
-                            <p className="text-sm font-medium opacity-80 mt-1">Visit Slot: {formData.timeSlot}</p>
-                        </div>
-                    </div>
+              <div className="bg-indigo-600 rounded-3xl p-6 text-white relative overflow-hidden shadow-xl shadow-indigo-100">
+                <div className="relative z-10 flex items-center gap-4">
+                  <img src={formData.visitorImage || "/visitor_placeholder.png"} className="w-20 h-20 rounded-2xl object-cover border-4 border-white/20" />
+                  <div>
+                    <p className="text-xs uppercase tracking-widest font-bold text-white/70">Gate Pass Preview</p>
+                    <h2 className="text-xl font-black">{formData.visitorName}</h2>
+                    <p className="text-sm font-medium opacity-80 mt-1">Visit Slot: {formData.timeSlot}</p>
+                  </div>
                 </div>
-                <div className="grid grid-cols-2 gap-6 bg-gray-50 p-6 rounded-2xl">
-                    <div>
-                        <p className="text-[10px] uppercase font-bold text-gray-400 tracking-widest">Host Employee</p>
-                        <p className="text-sm font-bold text-gray-900">{formData.employeeName}</p>
-                    </div>
-                    <div>
-                        <p className="text-[10px] uppercase font-bold text-gray-400 tracking-widest">Visitor Email</p>
-                        <p className="text-sm font-bold text-gray-900 truncate">{formData.visitorEmail}</p>
-                    </div>
+              </div>
+              <div className="grid grid-cols-2 gap-6 bg-gray-50 p-6 rounded-2xl">
+                <div>
+                  <p className="text-[10px] uppercase font-bold text-gray-400 tracking-widest">Host Employee</p>
+                  <p className="text-sm font-bold text-gray-900">{formData.employeeName}</p>
                 </div>
-                <p className="text-center text-gray-400 text-xs font-medium">By requesting, a digital gate pass will be issued upon approval and sent to your email.</p>
+                <div>
+                  <p className="text-[10px] uppercase font-bold text-gray-400 tracking-widest">Visitor Email</p>
+                  <p className="text-sm font-bold text-gray-900 truncate">{formData.visitorEmail}</p>
+                </div>
+              </div>
+              <p className="text-center text-gray-400 text-xs font-medium">By requesting, a digital gate pass will be issued upon approval and sent to your email.</p>
             </div>
           )}
 
@@ -241,45 +241,45 @@ const GatePassPage = () => {
                   {/* --- THE VISUAL GATE PASS --- */}
                   <div id="digital-gate-pass" className="bg-white border-2 border-dashed border-gray-200 rounded-[2rem] p-6 relative overflow-hidden shadow-2xl">
                     <div className="absolute top-0 right-0 p-4">
-                        <div className="bg-emerald-500 text-white text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest">Authorized</div>
+                      <div className="bg-emerald-500 text-white text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest">Authorized</div>
                     </div>
                     <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6 mb-8 border-b border-gray-100 pb-6 text-center sm:text-left">
-                        <div className="w-24 h-24 rounded-2xl overflow-hidden border-4 border-indigo-50 shadow-sm shrink-0">
-                            <img src={formData.visitorImage || "/visitor_placeholder.png"} className="w-full h-full object-cover" alt="Visitor" />
-                        </div>
-                        <div>
-                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-none mb-1">Pass Holder</p>
-                            <h2 className="text-xl sm:text-2xl font-black text-gray-900 leading-tight">{formData.visitorName}</h2>
-                            <p className="text-xs font-bold text-indigo-600 mt-1 uppercase tracking-tighter">ID: {visitData?.visitorId || "Pending..."}</p>
-                        </div>
+                      <div className="w-24 h-24 rounded-2xl overflow-hidden border-4 border-indigo-50 shadow-sm shrink-0">
+                        <img src={formData.visitorImage || "/visitor_placeholder.png"} className="w-full h-full object-cover" alt="Visitor" />
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-none mb-1">Pass Holder</p>
+                        <h2 className="text-xl sm:text-2xl font-black text-gray-900 leading-tight">{formData.visitorName}</h2>
+                        <p className="text-xs font-bold text-indigo-600 mt-1 uppercase tracking-tighter">ID: {visitData?.visitorId || "Pending..."}</p>
+                      </div>
                     </div>
                     <div className="grid grid-cols-2 gap-y-6 gap-x-4 mb-8">
-                        <div>
-                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Host Employee</p>
-                            <p className="text-sm font-black text-gray-800">{formData.employeeName}</p>
-                        </div>
-                        <div>
-                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Time Slot</p>
-                            <p className="text-sm font-black text-gray-800">{formData.timeSlot}</p>
-                        </div>
-                        <div>
-                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Validity</p>
-                            <p className="text-sm font-black text-gray-800 line-clamp-1 truncate">{new Date().toLocaleDateString()}</p>
-                        </div>
-                        <div>
-                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Location</p>
-                            <p className="text-sm font-black text-gray-800">Main Facility</p>
-                        </div>
+                      <div>
+                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Host Employee</p>
+                        <p className="text-sm font-black text-gray-800">{formData.employeeName}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Time Slot</p>
+                        <p className="text-sm font-black text-gray-800">{formData.timeSlot}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Validity</p>
+                        <p className="text-sm font-black text-gray-800 line-clamp-1 truncate">{new Date().toLocaleDateString()}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Location</p>
+                        <p className="text-sm font-black text-gray-800">Main Facility</p>
+                      </div>
                     </div>
                     <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100">
-                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1 text-center">Security Instruction</p>
-                        <p className="text-[11px] text-center text-gray-500 font-medium">Please present this digital pass at the entry gate. Subject to security screening.</p>
+                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1 text-center">Security Instruction</p>
+                      <p className="text-[11px] text-center text-gray-500 font-medium">Please present this digital pass at the entry gate. Subject to security screening.</p>
                     </div>
                   </div>
 
                   <div className="flex flex-col gap-3 pt-4">
-                    <button 
-                      onClick={() => window.print()} 
+                    <button
+                      onClick={() => window.print()}
                       className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black text-sm uppercase tracking-widest shadow-xl shadow-indigo-100 hover:scale-[1.02] transition-all flex items-center justify-center gap-2"
                     >
                       <FileText size={18} />
@@ -290,12 +290,12 @@ const GatePassPage = () => {
                 </div>
               ) : visitStatus === 'Declined' ? (
                 <div className="text-center space-y-6 py-10">
-                   <div className="w-20 h-20 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center mx-auto"><XCircle size={40} /></div>
-                   <div>
-                       <h2 className="text-2xl font-black text-gray-900 uppercase">Entry Declined</h2>
-                       <p className="text-gray-500 font-medium mt-2">Administrative clearance was not granted. Please contact help desk.</p>
-                   </div>
-                   <button onClick={() => navigate("/")} className="text-indigo-600 font-bold uppercase tracking-widest text-xs">Return Home</button>
+                  <div className="w-20 h-20 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center mx-auto"><XCircle size={40} /></div>
+                  <div>
+                    <h2 className="text-2xl font-black text-gray-900 uppercase">Entry Declined</h2>
+                    <p className="text-gray-500 font-medium mt-2">Administrative clearance was not granted. Please contact help desk.</p>
+                  </div>
+                  <button onClick={() => navigate("/")} className="text-indigo-600 font-bold uppercase tracking-widest text-xs">Return Home</button>
                 </div>
               ) : (
                 <div className="text-center space-y-8 py-4">
@@ -305,10 +305,10 @@ const GatePassPage = () => {
                   <div>
                     <h2 className="text-3xl font-black text-gray-900 uppercase tracking-tight">PENDING</h2>
                     <div className="mt-2 space-y-1">
-                        <p className="text-gray-900 font-bold uppercase tracking-widest text-xs">Requesting Admin Authorization</p>
-                        <p className="text-gray-400 font-medium px-8">
-                            Please wait while we secure your entry pass. A copy will be sent to <strong>{formData.visitorEmail}</strong>.
-                        </p>
+                      <p className="text-gray-900 font-bold uppercase tracking-widest text-xs">Requesting Admin Authorization</p>
+                      <p className="text-gray-400 font-medium px-8">
+                        Please wait while we secure your entry pass. A copy will be sent to <strong>{formData.visitorEmail}</strong>.
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -323,7 +323,7 @@ const GatePassPage = () => {
             <button onClick={() => step > 1 && setStep(step - 1)} className={`py-4 px-6 rounded-2xl font-bold flex items-center gap-2 ${step === 1 ? "invisible" : "text-gray-400 hover:bg-gray-50"}`}>
               <ChevronLeft size={20} /> Back
             </button>
-            <button onClick={() => step === 5 ? handleSubmit() : setStep(step + 1)} 
+            <button onClick={() => step === 5 ? handleSubmit() : setStep(step + 1)}
               disabled={(step === 1 && !formData.visitorName) || (step === 2 && !formData.employeeId) || (step === 4 && !formData.timeSlot) || loading}
               className={`py-4 px-10 rounded-2xl font-black text-sm uppercase tracking-widest transition-all ${loading ? "bg-gray-200 text-gray-400" : "bg-indigo-600 text-white shadow-xl shadow-indigo-100 hover:translate-y-[-2px] active:translate-y-0"}`}>
               {loading ? "Issuing..." : step === 3 && !formData.visitorImage ? "Continue without Photo" : step === 5 ? "Request Gate Pass" : "Continue"}
