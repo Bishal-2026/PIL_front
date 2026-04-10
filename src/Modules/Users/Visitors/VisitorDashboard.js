@@ -53,8 +53,6 @@ const VisitorDashboard = () => {
 
   useEffect(() => {
     fetchDashboardData();
-    const interval = setInterval(fetchDashboardData, 15000);
-    return () => clearInterval(interval);
   }, [user]);
 
   const handleAction = async (requestId, action, date = null, time = "", reason = "") => {

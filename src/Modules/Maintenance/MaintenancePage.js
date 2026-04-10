@@ -194,9 +194,7 @@ const MaintenancePage = () => {
 
   useEffect(() => {
     fetchData();
-    const interval = setInterval(() => fetchData(true), 30000); // 30s auto-refresh (silent)
     setTimeout(() => setAnimIn(true), 100);
-    return () => clearInterval(interval);
   }, []);
 
   const fetchData = async (isSilent = false) => {

@@ -278,6 +278,7 @@ const API = {
     add: (data) => postData("/workpermit", data),
     update: (id, data) => putData(`/workpermit/${id}`, data),
     updateStatus: (id, statusData) => makeRequest("patch", `/workpermit/${id}/status`, statusData),
+    getOptions: () => getData("/workpermit/get-options"),
     remove: (id) => deleteData(`/workpermit/${id}`),
   },
 

@@ -73,7 +73,6 @@ const Header = () => {
   }, [navigate]);
 
   useEffect(() => {
-    let intervalId;
     const fetchCount = async () => {
       try {
         const res = await getData("/activity/notifications/unread-count");
@@ -86,7 +85,6 @@ const Header = () => {
     };
 
     fetchCount();
-    intervalId = setInterval(fetchCount, 10000);
 
     const handleRead = () => setNotificationCount(0);
     const handleCountUpdated = (event) => {
@@ -103,7 +101,6 @@ const Header = () => {
     window.addEventListener("focus", handleFocus);
 
     return () => {
-      clearInterval(intervalId);
       window.removeEventListener("notifications-read", handleRead);
       window.removeEventListener("notifications-count-updated", handleCountUpdated);
       window.removeEventListener("focus", handleFocus);
