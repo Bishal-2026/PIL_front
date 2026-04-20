@@ -103,13 +103,13 @@ const AppRoutes = () => {
       <Route path="/privacypolicy" element={<PrivacyPolicy />} />
       <Route path="/staticqr" element={<StaticQr />} />
       <Route path="/unauthorized" element={<Unauthorized />} />
-      <Route path="/report-breakdown" element={<MaintenanceReportingPage />} />
-      <Route path="/work-permit" element={<WorkPermitPage />} />
-      <Route path="/permit-display" element={<WorkPermitTV />} />
-      <Route path="/permit-approvals" element={<WorkPermitApproval />} />
-      <Route path="/technician-portal" element={<TechnicianPortalPage />} />
-      <Route path="/visitor-registration" element={<VisitorRegistration />} />
-      <Route path="/gate-pass" element={<GatePassPage />} />
+      <Route path="/report-breakdown" element={<ProtectedRoute><MaintenanceReportingPage /></ProtectedRoute>} />
+      <Route path="/work-permit" element={<ProtectedRoute><WorkPermitPage /></ProtectedRoute>} />
+      <Route path="/permit-display" element={<ProtectedRoute><WorkPermitTV /></ProtectedRoute>} />
+      <Route path="/permit-approvals" element={<ProtectedRoute><WorkPermitApproval /></ProtectedRoute>} />
+      <Route path="/technician-portal" element={<ProtectedRoute><TechnicianPortalPage /></ProtectedRoute>} />
+      <Route path="/visitor-registration" element={<ProtectedRoute><VisitorRegistration /></ProtectedRoute>} />
+      <Route path="/gate-pass" element={<ProtectedRoute><GatePassPage /></ProtectedRoute>} />
       <Route path="*" element={<NotFound />} />
 
     </Routes>

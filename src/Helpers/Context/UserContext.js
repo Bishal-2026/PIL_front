@@ -5,7 +5,7 @@ import Cookies from "js-cookie";
 const UserContext = createContext();
 
 export const UserProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(undefined);
   const [userName, setUserName] = useState("User");
   const [permissions, setPermissions] = useState([]); // ✅ Add permissions state
 
@@ -14,6 +14,7 @@ export const UserProvider = ({ children }) => {
       localStorage.getItem("accesstoken") || Cookies.get("accesstoken");
 
     if (!accessToken) {
+      setUser(null);
       return;
     }
 
@@ -39,7 +40,10 @@ export const UserProvider = ({ children }) => {
         console.error("Error decoding user details:", error);
         setUserName("User");
         setPermissions([]);
+        setUser(null);
       }
+    } else {
+      setUser(null);
     }
   }, []);
 
