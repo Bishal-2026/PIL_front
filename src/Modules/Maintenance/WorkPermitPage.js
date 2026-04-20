@@ -75,6 +75,7 @@ const WorkPermitPage = () => {
     emergencyContact: "+91 99887-76655",
     emergencyPoint: "Safety Station #04",
     assignedApprover: "Rajesh Sharma",
+    exactLocationMarker: null, // { x: number, y: number }
   });
 
   const [workers, setWorkers] = useState([{ name: "", id: "", image: null, workerType: "Employee", company: "" }]);
@@ -170,13 +171,13 @@ const WorkPermitPage = () => {
         API.workpermit.getAll(),
         API.visitorlog.getAll({ limit: 50, status: "Approved" })
       ]);
-      
+
       if (permitRes.status) {
         // Sort by date (latest first)
         const sorted = permitRes.data.length > 0 ? permitRes.data.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0)) : [];
         setPermits(sorted);
       }
-      
+
       if (visitorRes.status) {
         setRecentVisitors(visitorRes.data);
       }
@@ -224,8 +225,7 @@ const WorkPermitPage = () => {
 
   const handleNext = () => {
     if (validateStep(activeStep)) {
-      const next = Math.min(activeStep + 1, 5);
-      saveStep(next);
+      setActiveStep(prev => Math.min(prev + 1, 5));
     }
   };
 
@@ -278,12 +278,20 @@ const WorkPermitPage = () => {
 
   const [mapView, setMapView] = useState("overview"); // 'overview' or 'detail'
   const [mapPin, setMapPin] = useState(null);
+  const [uploadedSiteImage, setUploadedSiteImage] = useState(null);
+  const [isMarkerConfirmed, setIsMarkerConfirmed] = useState(false);
 
   const handleMapClick = (e) => {
     const rect = e.currentTarget.getBoundingClientRect();
     const x = ((e.clientX - rect.left) / rect.width) * 100;
     const y = ((e.clientY - rect.top) / rect.height) * 100;
-    
+
+    if (uploadedSiteImage) {
+      setMapPin({ x, y });
+      setForm(prev => ({ ...prev, exactLocation: `Marked at [${Math.round(x)}%, ${Math.round(y)}%]` }));
+      return;
+    }
+
     if (mapView === "overview") {
       setMapView("detail");
       setMapPin(null); // Reset pin when zooming in
@@ -308,38 +316,6 @@ const WorkPermitPage = () => {
     const m = Math.floor((diff % 3600000) / 60000);
     return `${h}h ${m}m`;
   }, [form.startTime, form.endTime]);
-
-  const saveStep = async (nextStep = null) => {
-    try {
-      const payload = {
-        ...form,
-        permitId,
-        hazards,
-        ppe,
-        safetyChecks,
-        workers: workers.filter(w => w.name || w.id).map(w => ({ name: w.name, id: w.id, workerType: w.workerType, company: w.company })),
-        status: isEditing ? (nextStep === null ? "Pending" : "Pending") : "Pending"
-      };
-
-      let res;
-      if (editingPermit) {
-        res = await API.workpermit.update(editingPermit, payload);
-      } else {
-        res = await API.workpermit.add(payload);
-        if (res.status) {
-          setEditingPermit(res.data._id); // Assign the new DB ID
-          setIsEditing(true);
-        }
-      }
-
-      if (res.status) {
-        if (nextStep !== null) setActiveStep(nextStep);
-        await Promise.all([fetchPermits(), fetchOptions()]);
-      }
-    } catch (err) {
-      console.error("Failed to sync step data:", err);
-    }
-  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -373,6 +349,11 @@ const WorkPermitPage = () => {
     setPpe([]);
     setSafetyChecks({ gasTest: false, isolated: false, fireExt: false, equipChecked: false });
     setErrors({});
+    setUploadedSiteImage(null);
+    setIsMarkerConfirmed(false);
+    setMapPin(null);
+    setPermitId(`WP-${Math.floor(Math.random() * 900000 + 100000)}`);
+    setActiveStep(1);
   };
 
   const handleEditPermit = (p) => {
@@ -395,7 +376,11 @@ const WorkPermitPage = () => {
       emergencyContact: p.emergencyContact || "+91 99887-76655",
       emergencyPoint: p.emergencyPoint || "Safety Station #04",
       assignedApprover: p.assignedApprover || "Rajesh Sharma",
+      exactLocationMarker: p.exactLocationMarker || null,
     });
+    setUploadedSiteImage(p.siteImage || null);
+    setMapPin(p.exactLocationMarker || null);
+    setIsMarkerConfirmed(!!p.exactLocationMarker);
     setWorkers(p.workers && Array.isArray(p.workers) && p.workers.length > 0 ? p.workers.map(w => ({ ...w, image: null, workerType: w.workerType || "Employee", company: w.company || "" })) : [{ name: "", id: "", image: null, workerType: "Employee", company: "" }]);
     setHazards(p.hazards || []);
     setPpe(p.ppe || []);
@@ -425,39 +410,42 @@ const WorkPermitPage = () => {
       controlMeasures: p.controlMeasures || "",
       remarks: p.remarks || "",
       emergencyContact: p.emergencyContact || "+91 99887-76655",
-      emergencyPoint: p.emergencyPoint || "Safety Station #04",
       assignedApprover: p.assignedApprover || "Rajesh Sharma",
+      exactLocationMarker: p.exactLocationMarker || null,
     });
-    
+    setUploadedSiteImage(p.siteImage || null);
+    setMapPin(p.exactLocationMarker || null);
+    setIsMarkerConfirmed(!!p.exactLocationMarker);
+
     // Copy technical crew
-    setWorkers(p.workers && Array.isArray(p.workers) && p.workers.length > 0 
-      ? p.workers.map(w => ({ ...w, image: null, workerType: w.workerType || "Employee", company: w.company || "" })) 
+    setWorkers(p.workers && Array.isArray(p.workers) && p.workers.length > 0
+      ? p.workers.map(w => ({ ...w, image: null, workerType: w.workerType || "Employee", company: w.company || "" }))
       : [{ name: "", id: "", image: null, workerType: "Employee", company: "" }]
     );
-    
+
     // Copy safety measures
     setHazards(p.hazards || []);
     setPpe(p.ppe || []);
     setSafetyChecks(p.safetyChecks || {
-        gasTest: false,
-        isolated: false,
-        fireExt: false,
-        equipChecked: false,
-        ventilationCheck: false,
-        communicationSet: false,
-        lockOutTagOut: false,
-        scaffoldingReady: false
+      gasTest: false,
+      isolated: false,
+      fireExt: false,
+      equipChecked: false,
+      ventilationCheck: false,
+      communicationSet: false,
+      lockOutTagOut: false,
+      scaffoldingReady: false
     });
 
     // 2. Generate new ID
     setPermitId(`WP-${Math.floor(Math.random() * 900000 + 100000)}`);
-    
+
     // 3. Set UI state
     setIsEditing(false); // It's a new permit application
     setEditingPermit(null);
     setActiveStep(1);
     setActiveTab("request");
-    
+
     toast.info("Previous permit details copied. Please update the schedule and submit.");
   };
 
@@ -487,13 +475,14 @@ const WorkPermitPage = () => {
     if (!form.supervisor) newErrors.supervisor = "Supervisor required";
     if (!form.safetyOfficer) newErrors.safetyOfficer = "Safety Officer required";
     if (!form.emergencyContact) newErrors.emergencyContact = "SOS number required";
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (activeStep < 5) return; // Prevent submission until last step
     if (validate()) {
       try {
         if (isEditing) {
@@ -502,16 +491,18 @@ const WorkPermitPage = () => {
             hazards: hazards,
             ppe: ppe,
             safetyChecks: safetyChecks,
+            siteImage: uploadedSiteImage,
+            exactLocationMarker: mapPin,
             workers: workers.filter(w => w.name || w.id).map(w => ({ name: w.name, id: w.id, workerType: w.workerType, company: w.company }))
           });
           if (res.status) {
-            toast.success("Permit submitted successfully!");
+            toast.success("Permit updated successfully!");
             setPermits(permits.map(p => p._id === editingPermit ? res.data : p));
             setIsEditing(false);
             setEditingPermit(null);
-            setActiveTab("history");
           } else {
-            toast.error(res.message || "Failed to submit permit.");
+            toast.error(res.message || "Failed to update permit.");
+            return;
           }
         } else {
           const res = await API.workpermit.add({
@@ -521,18 +512,28 @@ const WorkPermitPage = () => {
             hazards: [...hazards],
             ppe: [...ppe],
             safetyChecks: safetyChecks,
+            siteImage: uploadedSiteImage,
+            exactLocationMarker: mapPin,
             workers: workers.filter(w => w.name || w.id).map(w => ({ name: w.name, id: w.id, workerType: w.workerType, company: w.company }))
           });
           if (res.status) {
+            toast.success("Work Permit created successfully!");
             setPermits([res.data, ...permits]);
+          } else {
+            toast.error(res.message || "Failed to create permit.");
+            return;
           }
         }
-        // Silent success transition
+        // Success transition
         setActiveTab("history");
         await Promise.all([fetchPermits(), fetchOptions()]);
+        resetForm();
       } catch (error) {
         console.error("Failed to save permit:", error);
+        toast.error("An unexpected error occurred during submission.");
       }
+    } else {
+      toast.warning("Please fill all required fields correctly.");
     }
   };
 
@@ -547,7 +548,7 @@ const WorkPermitPage = () => {
       <div className={`wp-container ${activeTab === "history" ? "wp-full-width" : ""}`}>
 
         {activeTab === "request" ? (
-          <form onSubmit={handleSubmit}>
+          <div className="wp-form-container">
             <div className="wp-progress-wrapper">
               <div className="wp-progress-bar-container">
                 <div className="wp-header-info-group">
@@ -561,10 +562,10 @@ const WorkPermitPage = () => {
                   </button>
                   <div className="wp-separator" />
                   <div className="wp-id-pill-wrapper">
-                      <div className="wp-id-pill">
-                        <span className="wp-pill-label">ID</span>
-                        <span className="wp-pill-val">{permitId}</span>
-                      </div>
+                    <div className="wp-id-pill">
+                      <span className="wp-pill-label">ID</span>
+                      <span className="wp-pill-val">{permitId}</span>
+                    </div>
                   </div>
                 </div>
 
@@ -610,14 +611,14 @@ const WorkPermitPage = () => {
                       <label>Work Title / Subject</label>
                       <input name="title" value={form.title} onChange={handleInputChange} placeholder="E.g. Boiler Area Maintenance..." autoFocus />
                     </div>
-                    <SearchableSelection 
+                    <SearchableSelection
                       label="Classification"
                       name="workType"
                       value={form.workType}
                       options={dynamicOptions.workType}
                       onChange={handleInputChange}
                     />
-                    <SearchableSelection 
+                    <SearchableSelection
                       label="Risk Level"
                       name="riskLevel"
                       value={form.riskLevel}
@@ -647,37 +648,91 @@ const WorkPermitPage = () => {
                     </div>
                   </div>
 
-                  {/* 🗺️ Interactive Map */}
+                  {/* 🗺️ Interactive Map / Site Image Selection */}
                   <div className="wp-map-card">
                     <div className="wp-map-header">
                       <span className="material-symbols-rounded">map</span>
-                      <span>Interactive Site Blueprint {mapView === 'detail' ? '- Detail View' : '- Global Overview'}</span>
-                      {mapView === 'detail' && (
-                        <button className="wp-map-reset" onClick={() => { setMapView('overview'); setMapPin(null); }}>
-                          <span className="material-symbols-rounded">zoom_out_map</span> Back to Global
+                      <span>{uploadedSiteImage ? 'Exact Work Location' : 'Step 2: Site Blueprint / Image'}</span>
+                      {uploadedSiteImage && (
+                        <button type="button" className="wp-map-reset" onClick={() => { setUploadedSiteImage(null); setMapPin(null); setIsMarkerConfirmed(false); }}>
+                          <span className="material-symbols-rounded">refresh</span> Change Image
                         </button>
                       )}
                     </div>
-                    <div className="wp-map-viewport" onClick={handleMapClick}>
-                      <img 
-                        src={mapView === 'overview' ? overviewImg : detailImg} 
-                        alt="Site Plan" 
-                        className={`wp-blueprint-img ${mapView}`} 
-                      />
-                      {mapPin && mapView === 'detail' && (
-                        <div 
-                          className="wp-map-pin active" 
-                          style={{ left: `${mapPin.x}%`, top: `${mapPin.y}%` }}
-                        />
-                      )}
-                      {mapView === 'overview' && (
-                        <div className="wp-map-hint">Click on an area to zoom in</div>
-                      )}
-                    </div>
+                    
+                    {!uploadedSiteImage ? (
+                      <div className="wp-map-upload-container">
+                        <div className="wp-map-upload-dropzone" onClick={() => fileInputRef.current.click()}>
+                          <span className="material-symbols-rounded">cloud_upload</span>
+                          <p>Upload site image and click on the image to mark exact work location.</p>
+                          <span className="wp-upload-hint">Supports JPG, PNG</span>
+                          <input 
+                            type="file" 
+                            ref={fileInputRef} 
+                            style={{ display: 'none' }} 
+                            accept="image/*" 
+                            onChange={(e) => {
+                              const file = e.target.files[0];
+                              if (file) {
+                                const reader = new FileReader();
+                                reader.onloadend = () => {
+                                  setUploadedSiteImage(reader.result);
+                                };
+                                reader.readAsDataURL(file);
+                              }
+                            }} 
+                          />
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="wp-map-viewport-container">
+                         <div className="wp-map-instruction">
+                           {isMarkerConfirmed ? 'Location Confirmed' : 'Click on the image to mark exact work location'}
+                         </div>
+                         <div className={`wp-map-viewport ${isMarkerConfirmed ? 'confirmed' : ''}`} onClick={!isMarkerConfirmed ? handleMapClick : undefined}>
+                          <img
+                            src={uploadedSiteImage}
+                            alt="Site Plan"
+                            className="wp-blueprint-img custom"
+                          />
+                          {mapPin && (
+                            <div
+                              className="wp-map-pin active bounce-animation"
+                              style={{ left: `${mapPin.x}%`, top: `${mapPin.y}%` }}
+                            >
+                              <span className="material-symbols-rounded">location_on</span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="wp-map-controls">
+                          {!isMarkerConfirmed ? (
+                            <button 
+                              type="button" 
+                              className="wp-confirm-loc-btn" 
+                              disabled={!mapPin}
+                              onClick={() => {
+                                setIsMarkerConfirmed(true);
+                                setForm(prev => ({ ...prev, exactLocationMarker: mapPin }));
+                              }}
+                            >
+                              <span className="material-symbols-rounded">check_circle</span> Confirm Location
+                            </button>
+                          ) : (
+                            <button 
+                              type="button" 
+                              className="wp-change-loc-btn"
+                              onClick={() => setIsMarkerConfirmed(false)}
+                            >
+                              <span className="material-symbols-rounded">edit_location_alt</span> Change Mark
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   <div className="wp-grid">
-                    <SearchableSelection 
+                    <SearchableSelection
                       label="Plant / Facility"
                       name="plant"
                       value={form.plant}
@@ -686,7 +741,7 @@ const WorkPermitPage = () => {
                       placeholder="e.g. Chemical Unit B"
                     />
 
-                    <SearchableSelection 
+                    <SearchableSelection
                       label="Process Area"
                       name="area"
                       value={form.area}
@@ -695,7 +750,7 @@ const WorkPermitPage = () => {
                       placeholder="e.g. Tank Farm 4"
                     />
 
-                    <SearchableSelection 
+                    <SearchableSelection
                       label="General Site Location"
                       name="location"
                       value={form.location}
@@ -763,24 +818,24 @@ const WorkPermitPage = () => {
                               const nw = [...workers]; nw[i].name = e.target.value; setWorkers(nw);
                             }} placeholder="Full Name" />
                             {w.workerType === 'Contractor' && w.name.length > 1 && (
-                                <div className="wp-visitor-dropdown" style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 10, background: 'white', border: '1px solid #e2e8f0', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', maxHeight: '150px', overflowY: 'auto' }}>
-                                    {recentVisitors.filter(v => v.visitorName.toLowerCase().includes(w.name.toLowerCase())).map(v => (
-                                        <div key={v._id} className="wp-visitor-option" style={{ padding: '8px 12px', cursor: 'pointer', borderBottom: '1px solid #f1f5f9', fontSize: '12px' }}
-                                             onClick={() => {
-                                                 const nw = [...workers];
-                                                 nw[i].name = v.visitorName;
-                                                 nw[i].image = v.visitorImage;
-                                                 nw[i].id = v.visitorPhone || "V-LOG";
-                                                 nw[i].company = "Visitor Hub";
-                                                 setWorkers(nw);
-                                             }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                <img src={v.visitorImage} style={{ width: '20px', height: '20px', borderRadius: '4px' }} alt="" />
-                                                <span>{v.visitorName} ({v.reason})</span>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
+                              <div className="wp-visitor-dropdown" style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 10, background: 'white', border: '1px solid #e2e8f0', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', maxHeight: '150px', overflowY: 'auto' }}>
+                                {recentVisitors.filter(v => v.visitorName.toLowerCase().includes(w.name.toLowerCase())).map(v => (
+                                  <div key={v._id} className="wp-visitor-option" style={{ padding: '8px 12px', cursor: 'pointer', borderBottom: '1px solid #f1f5f9', fontSize: '12px' }}
+                                    onClick={() => {
+                                      const nw = [...workers];
+                                      nw[i].name = v.visitorName;
+                                      nw[i].image = v.visitorImage;
+                                      nw[i].id = v.visitorPhone || "V-LOG";
+                                      nw[i].company = "Visitor Hub";
+                                      setWorkers(nw);
+                                    }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                      <img src={v.visitorImage} style={{ width: '20px', height: '20px', borderRadius: '4px' }} alt="" />
+                                      <span>{v.visitorName} ({v.reason})</span>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
                             )}
                           </div>
                           <div className="wp-worker-id-row">
@@ -824,7 +879,7 @@ const WorkPermitPage = () => {
                   </div>
                   <div className="wp-risk-section">
                     <div className="wp-grid" style={{ gap: '24px' }}>
-                      <SearchableSelection 
+                      <SearchableSelection
                         label="Identify Hazards"
                         name="hazards"
                         value={hazards.map(id => HAZARDS.find(h => h.id === id)?.label).filter(Boolean)}
@@ -838,7 +893,7 @@ const WorkPermitPage = () => {
                         placeholder="Search or select hazards..."
                       />
 
-                      <SearchableSelection 
+                      <SearchableSelection
                         label="Required PPE"
                         name="ppe"
                         value={ppe}
@@ -848,7 +903,7 @@ const WorkPermitPage = () => {
                         placeholder="Search or select PPE..."
                       />
 
-                      <SearchableSelection 
+                      <SearchableSelection
                         label="Safety Readiness Checklist"
                         name="safetyChecks"
                         value={Object.keys(safetyChecks)
@@ -871,7 +926,15 @@ const WorkPermitPage = () => {
                       <div className="wp-form-group">
                         <label>Supporting Certificates (Image/PDF)</label>
                         <div className="wp-modern-upload-box" onClick={() => fileInputRef.current?.click()}>
-                          <input type="file" style={{ display: 'none' }} ref={fileInputRef} multiple />
+                          <input 
+                            type="file" 
+                            style={{ display: 'none' }} 
+                            ref={fileInputRef} 
+                            multiple 
+                            onChange={(e) => {
+                              toast.info(`${e.target.files.length} safety documents selected.`);
+                            }}
+                          />
                           <span className="material-symbols-rounded">cloud_upload</span>
                           <div>
                             <strong>Upload Documentation</strong>
@@ -928,7 +991,7 @@ const WorkPermitPage = () => {
                     </div>
                   </div>
                   <div className="wp-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
-                    <SearchableSelection 
+                    <SearchableSelection
                       label="Line Supervisor (Issuer)"
                       name="supervisor"
                       value={form.supervisor}
@@ -936,7 +999,7 @@ const WorkPermitPage = () => {
                       onChange={handleInputChange}
                     />
 
-                    <SearchableSelection 
+                    <SearchableSelection
                       label="Safety Officer (HSSE)"
                       name="safetyOfficer"
                       value={form.safetyOfficer}
@@ -944,7 +1007,7 @@ const WorkPermitPage = () => {
                       onChange={handleInputChange}
                     />
 
-                    <SearchableSelection 
+                    <SearchableSelection
                       label="Assigned Approver (Final Auth)"
                       name="assignedApprover"
                       value={form.assignedApprover}
@@ -970,14 +1033,13 @@ const WorkPermitPage = () => {
                     Next Step <span className="material-symbols-rounded">arrow_forward</span>
                   </button>
                 ) : (
-                  <button type="submit" className="wp-nav-btn wp-submit">
+                  <button type="button" className="wp-nav-btn wp-submit" onClick={handleSubmit}>
                     Finalize & Submit <span className="material-symbols-rounded">send</span>
                   </button>
                 )}
               </div>
             </div>
-
-          </form>
+          </div>
         ) : (
           <div className="wp-history-view-container">
             {/* 🔍 Filter Bar */}
@@ -1026,16 +1088,16 @@ const WorkPermitPage = () => {
                     <tr key={p._id} className="wp-fade-in">
                       <td><span className="wp-table-sno">{idx + 1}</span></td>
                       <td>
-                        <span 
-                          className={`wp-clickable-id ${p.status === 'Approved' ? 'disabled' : ''}`} 
+                        <span
+                          className={`wp-clickable-id ${p.status === 'Approved' ? 'disabled' : ''}`}
                           onClick={() => p.status !== 'Approved' && handleEditPermit(p)}
                         >
                           #{p.permitId}
                         </span>
                       </td>
                       <td>
-                        <div 
-                          className={`wp-table-title ${p.status !== 'Approved' ? 'clickable' : ''}`} 
+                        <div
+                          className={`wp-table-title ${p.status !== 'Approved' ? 'clickable' : ''}`}
                           onClick={() => p.status !== 'Approved' && handleEditPermit(p)}
                         >
                           <h4>{p.title}</h4>
@@ -1050,13 +1112,13 @@ const WorkPermitPage = () => {
                       </td>
                       <td style={{ whiteSpace: 'nowrap' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', fontWeight: '800', color: 'var(--wp-primary)' }}>
-                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}>
-                              {new Date(p.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                           </div>
-                           <span style={{ color: '#94a3b8' }}>→</span>
-                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--wp-secondary-light)', opacity: 0.8, whiteSpace: 'nowrap' }}>
-                              {new Date(p.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                           </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}>
+                            {new Date(p.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </div>
+                          <span style={{ color: '#94a3b8' }}>→</span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--wp-secondary-light)', opacity: 0.8, whiteSpace: 'nowrap' }}>
+                            {new Date(p.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </div>
                         </div>
                       </td>
                       <td>

@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from "react";
-import { 
-  CheckCircle2, XCircle, Clock, Eye, 
-  Shield, MapPin, HardHat, Phone,
-  AlertTriangle, ArrowRight, Filter,
-  Menu, MoreVertical, LayoutGrid, List,
-  Calendar, UserCheck, ShieldAlert,
-  ChevronRight, RotateCcw, Layers
+import {
+    CheckCircle2, XCircle, Clock, Eye,
+    Shield, MapPin, HardHat, Phone,
+    AlertTriangle, ArrowRight, Filter,
+    Menu, MoreVertical, LayoutGrid, List,
+    Calendar, UserCheck, ShieldAlert,
+    ChevronRight, RotateCcw, Layers
 } from "lucide-react";
 import { API } from "../../Helpers/api";
 import { useUser } from "../../Helpers/Context/UserContext";
@@ -25,7 +25,7 @@ const WorkPermitApproval = () => {
         try {
             const userName = user?.name || user?.firstName;
             const userRole = user?.role?.toLowerCase();
-            
+
             // Fetch ALL permits assigned or global (removed hardcoded status: "Pending")
             let queryParams = {};
             if (userRole !== "superadmin" && userRole !== "admin") {
@@ -72,8 +72,8 @@ const WorkPermitApproval = () => {
     };
 
     const filteredPermits = permits.filter(p => {
-        const matchesSearch = p.title?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                             p.permitId?.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesSearch = p.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            p.permitId?.toLowerCase().includes(searchTerm.toLowerCase());
         const matchesStatus = filterStatus === "All" || p.status === filterStatus;
         return matchesSearch && matchesStatus;
     });
@@ -87,7 +87,7 @@ const WorkPermitApproval = () => {
     return (
         <div className="wp-root wp-fade-in" style={{ padding: '20px', background: '#F8FAFC', minHeight: '100vh' }}>
             <div className="wp-container wp-full-width">
-                
+
                 {/* 🏰 HEADER SECTION */}
                 <header className="wp-approval-header">
                     <div className="wp-approval-title-section">
@@ -101,35 +101,35 @@ const WorkPermitApproval = () => {
                     </div>
 
                     <div className="wp-approval-stats">
-                         <div 
+                        <div
                             className={`wp-stat-card ${filterStatus === 'Pending' ? 'active pending' : ''}`}
                             onClick={() => setFilterStatus('Pending')}
-                         >
-                             <div className="wp-stat-number">{stats.pending}</div>
-                             <div className="wp-stat-info">
+                        >
+                            <div className="wp-stat-number">{stats.pending}</div>
+                            <div className="wp-stat-info">
                                 <span className="wp-stat-label">Queue</span>
                                 <span className="wp-stat-name">Pending</span>
-                             </div>
-                         </div>
-                         <div 
+                            </div>
+                        </div>
+                        <div
                             className={`wp-stat-card ${filterStatus === 'Approved' ? 'active approved' : ''}`}
                             onClick={() => setFilterStatus('Approved')}
-                         >
-                             <div className="wp-stat-number">{stats.approved}</div>
-                             <div className="wp-stat-info">
+                        >
+                            <div className="wp-stat-number">{stats.approved}</div>
+                            <div className="wp-stat-info">
                                 <span className="wp-stat-label">Cleared</span>
                                 <span className="wp-stat-name">Approved</span>
-                             </div>
-                         </div>
+                            </div>
+                        </div>
                     </div>
                 </header>
 
                 <div className="wp-filter-bar">
                     <div className="wp-search-box" style={{ maxWidth: 'none' }}>
                         <span className="material-symbols-rounded">search</span>
-                        <input 
-                            className="wp-search-input" 
-                            placeholder="Search pending permits by ID or title..." 
+                        <input
+                            className="wp-search-input"
+                            placeholder="Search pending permits by ID or title..."
                             value={searchTerm}
                             onChange={e => setSearchTerm(e.target.value)}
                         />
@@ -146,7 +146,7 @@ const WorkPermitApproval = () => {
                     <div className="grid grid-cols-1 gap-4">
                         <AnimatePresence>
                             {filteredPermits.map((p, idx) => (
-                                <motion.div 
+                                <motion.div
                                     layout
                                     initial={{ opacity: 0, y: 20 }}
                                     animate={{ opacity: 1, y: 0 }}
@@ -161,7 +161,7 @@ const WorkPermitApproval = () => {
                                             <div className="wp-permit-card-index">
                                                 {(idx + 1).toString().padStart(2, '0')}
                                             </div>
-                                            
+
                                             <div className="wp-permit-card-content">
                                                 <div className="wp-permit-card-badges">
                                                     <span className="wp-permit-id-tag">#{p.permitId}</span>
@@ -173,18 +173,18 @@ const WorkPermitApproval = () => {
                                                     {p.title}
                                                 </h3>
                                                 <div className="wp-permit-card-meta">
-                                                     <div className="wp-meta-item">
+                                                    <div className="wp-meta-item">
                                                         <span className="wp-meta-label">Location</span>
                                                         <span className="wp-meta-val">{p.plant} • {p.area}</span>
-                                                     </div>
-                                                     <div className="wp-meta-item">
+                                                    </div>
+                                                    <div className="wp-meta-item">
                                                         <span className="wp-meta-label">Timeframe</span>
                                                         <span className="wp-meta-val">{new Date(p.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} — {new Date(p.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                                                     </div>
-                                                     <div className="wp-meta-item">
+                                                    </div>
+                                                    <div className="wp-meta-item">
                                                         <span className="wp-meta-label">Crew</span>
                                                         <span className="wp-meta-val">{p.workers?.length || 0} Members</span>
-                                                     </div>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -212,17 +212,17 @@ const WorkPermitApproval = () => {
                 <AnimatePresence>
                     {selectedPermit && (
                         <div className="wp-auth-modal-overlay">
-                            <motion.div 
-                                initial={{ opacity: 0 }} 
-                                animate={{ opacity: 1 }} 
+                            <motion.div
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
                                 exit={{ opacity: 0 }}
                                 onClick={() => setSelectedPermit(null)}
                                 className="absolute inset-0 bg-slate-900/60 backdrop-blur-md"
                             />
-                            <motion.div 
-                                initial={{ opacity: 0, scale: 0.9 }} 
-                                animate={{ opacity: 1, scale: 1 }} 
-                                exit={{ opacity: 0, scale: 0.9 }} 
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.9 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                exit={{ opacity: 0, scale: 0.9 }}
                                 transition={{ type: "spring", damping: 25, stiffness: 300 }}
                                 className="wp-auth-modal-container"
                             >
@@ -325,18 +325,33 @@ const WorkPermitApproval = () => {
                                 </div>
 
                                 <div className="wp-modal-footer">
-                                    <button 
-                                        onClick={() => handleAction(selectedPermit._id, 'Rejected')}
-                                        className="wp-modal-btn wp-modal-btn-reject"
-                                    >
-                                        <XCircle size={18} /> Deny Entry
-                                    </button>
-                                    <button 
-                                        onClick={() => handleAction(selectedPermit._id, 'Approved')}
-                                        className="wp-modal-btn wp-modal-btn-approve"
-                                    >
-                                        <CheckCircle2 size={18} /> Authorize Permit
-                                    </button>
+                                    {selectedPermit.status !== 'Stopped' && (
+                                        <button 
+                                            onClick={() => handleAction(selectedPermit._id, 'Stopped')}
+                                            className="wp-modal-btn wp-modal-btn-reject"
+                                        >
+                                            <XCircle size={18} /> Stop Work
+                                        </button>
+                                    )}
+                                    {(selectedPermit.status !== 'In Progress' && selectedPermit.status !== 'Approved') && (
+                                        <button 
+                                            onClick={() => handleAction(selectedPermit._id, 'In Progress')}
+                                            className="wp-modal-btn wp-modal-btn-approve"
+                                        >
+                                            <CheckCircle2 size={18} /> Start Work (In Progress)
+                                        </button>
+                                    )}
+                                    {(selectedPermit.status === 'In Progress' || selectedPermit.status === 'Approved') && (
+                                        <div className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-emerald-50 text-emerald-600 font-black text-xs uppercase tracking-widest border border-emerald-100">
+                                            <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+                                            Currently In Progress
+                                        </div>
+                                    )}
+                                    {selectedPermit.status === 'Stopped' && (
+                                        <div className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-red-50 text-red-600 font-black text-xs uppercase tracking-widest border border-red-100">
+                                            <XCircle size={20} /> Currently Stopped
+                                        </div>
+                                    )}
                                 </div>
                             </motion.div>
                         </div>
