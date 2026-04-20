@@ -47,6 +47,18 @@ const WorkPermitApproval = () => {
         if (user) fetchPermits();
     }, [user]);
 
+    // 🔒 Background Scroll Lock (Popup open hone pe background scroll lock krne k liye)
+    useEffect(() => {
+        if (selectedPermit) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = 'unset';
+        }
+        return () => {
+            document.body.style.overflow = 'unset';
+        };
+    }, [selectedPermit]);
+
     const handleAction = async (id, status) => {
         try {
             const res = await API.workpermit.updateStatus(id, { status });
@@ -199,7 +211,7 @@ const WorkPermitApproval = () => {
                 {/* 🛡️ PERMIT DETAIL SIDEBAR / OVERLAY */}
                 <AnimatePresence>
                     {selectedPermit && (
-                        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-10">
+                        <div className="wp-auth-modal-overlay">
                             <motion.div 
                                 initial={{ opacity: 0 }} 
                                 animate={{ opacity: 1 }} 
@@ -208,119 +220,122 @@ const WorkPermitApproval = () => {
                                 className="absolute inset-0 bg-slate-900/60 backdrop-blur-md"
                             />
                             <motion.div 
-                                initial={{ opacity: 0, scale: 0.9, y: 20 }} 
-                                animate={{ opacity: 1, scale: 1, y: 0 }} 
-                                exit={{ opacity: 0, scale: 0.9, y: 20 }} 
+                                initial={{ opacity: 0, scale: 0.9 }} 
+                                animate={{ opacity: 1, scale: 1 }} 
+                                exit={{ opacity: 0, scale: 0.9 }} 
                                 transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                                className="relative w-full max-w-[900px] max-h-[90vh] bg-white rounded-[3rem] shadow-2xl flex flex-col overflow-hidden"
+                                className="wp-auth-modal-container"
                             >
-                                <div className="absolute top-8 right-8 z-10">
-                                    <button onClick={() => setSelectedPermit(null)} className="p-2 hover:bg-red-50 hover:text-red-500 text-slate-300 rounded-full transition-all">
-                                        <XCircle size={32} />
+                                <div className="wp-modal-header">
+                                    <div className="wp-modal-id-badge">#{selectedPermit.permitId}</div>
+                                    <h2 className="wp-modal-title">{selectedPermit.title}</h2>
+                                    <p className="wp-modal-desc">
+                                        {selectedPermit.description || "Routine operational entry to facilitate necessary site modifications."}
+                                    </p>
+                                    <button onClick={() => setSelectedPermit(null)} className="wp-modal-close">
+                                        <XCircle size={24} />
                                     </button>
                                 </div>
 
-                                <div className="flex-1 overflow-auto px-12 pb-32 no-scrollbar">
-                                    <div className="mb-10">
-                                        <p className="font-mono font-black text-blue-600 text-2xl border-b-4 border-blue-600 w-fit mb-4 tracking-tighter">#{selectedPermit.permitId}</p>
-                                        <h2 className="text-5xl font-black text-slate-900 tracking-tighter leading-none mb-4 uppercase">{selectedPermit.title}</h2>
-                                        <p className="text-lg text-slate-400 font-bold max-w-[600px] leading-relaxed italic">"{selectedPermit.description || "Routine operational entry to facilitate necessary site modifications."}"</p>
-                                    </div>
-
-                                    <div className="grid grid-cols-2 gap-8 mb-12">
-                                        <div className="bg-slate-50 p-6 rounded-3xl border border-slate-100">
-                                            <label className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] block mb-4">Location Matrix</label>
-                                            <div className="space-y-4">
-                                                <div className="flex items-center gap-4">
-                                                    <MapPin className="text-blue-600" />
-                                                    <span className="text-lg font-black text-slate-700">{selectedPermit.plant} / {selectedPermit.area}</span>
+                                <div className="wp-modal-body no-scrollbar">
+                                    <div className="wp-modal-grid">
+                                        <div className="wp-modal-card">
+                                            <span className="wp-modal-section-label">Location Matrix</span>
+                                            <div className="wp-modal-info-item">
+                                                <div className="wp-modal-icon-box"><MapPin size={18} /></div>
+                                                <div className="wp-modal-info-text">
+                                                    <span className="wp-modal-info-label">Plant / Area</span>
+                                                    <span className="wp-modal-info-val">{selectedPermit.plant} • {selectedPermit.area}</span>
                                                 </div>
-                                                <div className="flex items-center gap-4">
-                                                    <Layers className="text-blue-600" />
-                                                    <span className="text-base font-bold text-slate-400">{selectedPermit.exactLocation || "Main Access Hub"}</span>
+                                            </div>
+                                            <div className="wp-modal-info-item">
+                                                <div className="wp-modal-icon-box"><Layers size={18} /></div>
+                                                <div className="wp-modal-info-text">
+                                                    <span className="wp-modal-info-label">Exact Point</span>
+                                                    <span className="wp-modal-info-val">{selectedPermit.exactLocation || "Main Access Hub"}</span>
                                                 </div>
                                             </div>
                                         </div>
-                                        <div className="bg-slate-50 p-6 rounded-3xl border border-slate-100">
-                                            <label className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] block mb-4">Time Assessment</label>
-                                            <div className="space-y-4">
-                                                <div className="flex items-center gap-4">
-                                                    <Clock className="text-emerald-600" />
-                                                    <span className="text-lg font-black text-slate-700">{new Date(selectedPermit.startTime).toLocaleString()}</span>
+
+                                        <div className="wp-modal-card">
+                                            <span className="wp-modal-section-label">Time Assessment</span>
+                                            <div className="wp-modal-info-item">
+                                                <div className="wp-modal-icon-box"><Clock size={18} /></div>
+                                                <div className="wp-modal-info-text">
+                                                    <span className="wp-modal-info-label">Start Timing</span>
+                                                    <span className="wp-modal-info-val">{new Date(selectedPermit.startTime).toLocaleString()}</span>
                                                 </div>
-                                                <div className="flex items-center gap-4">
-                                                    <RotateCcw className="text-red-500" />
-                                                    <span className="text-lg font-black text-slate-400 tracking-tighter">{new Date(selectedPermit.endTime).toLocaleString()}</span>
+                                            </div>
+                                            <div className="wp-modal-info-item">
+                                                <div className="wp-modal-icon-box"><RotateCcw size={18} /></div>
+                                                <div className="wp-modal-info-text">
+                                                    <span className="wp-modal-info-label">Expiry / Return</span>
+                                                    <span className="wp-modal-info-val">{new Date(selectedPermit.endTime).toLocaleString()}</span>
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
 
-                                    <div className="mb-12">
-                                        <label className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] block mb-6">Safety Checklist Status</label>
-                                        <div className="grid grid-cols-2 gap-4">
+                                    <div className="mb-8">
+                                        <span className="wp-modal-section-label">Safety Readiness Checklist</span>
+                                        <div className="wp-modal-check-grid">
                                             {Object.entries(selectedPermit.safetyChecks || {}).map(([key, checked]) => (
-                                                <div key={key} className={`flex items-center gap-4 p-4 rounded-2xl border ${checked ? 'bg-emerald-50 border-emerald-100 text-emerald-700' : 'bg-slate-50 border-slate-100 text-slate-300'}`}>
-                                                    <CheckCircle2 size={24} className={checked ? 'text-emerald-500' : 'text-slate-200'} />
-                                                    <span className="text-xs font-black uppercase tracking-wider">{key.replace(/([A-Z])/g, ' $1')}</span>
+                                                <div key={key} className={`wp-modal-check-item ${checked ? 'checked' : 'unchecked'}`}>
+                                                    <CheckCircle2 size={16} />
+                                                    <span className="text-[11px] font-bold uppercase tracking-tight">{key.replace(/([A-Z])/g, ' $1')}</span>
                                                 </div>
                                             ))}
                                         </div>
                                     </div>
 
-                                    <div className="mb-12">
-                                        <label className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] block mb-6">Execution Crew ({selectedPermit.workers?.length || 0})</label>
-                                        <div className="flex flex-wrap gap-4">
+                                    <div className="mb-8">
+                                        <span className="wp-modal-section-label">Execution Crew ({selectedPermit.workers?.length || 0})</span>
+                                        <div className="flex flex-wrap gap-3">
                                             {(selectedPermit.workers || []).map((w, i) => (
-                                                <div key={i} className="flex items-center gap-4 p-3 bg-white border border-slate-100 rounded-2xl shadow-sm pr-6">
-                                                    <img src={w.image || "https://i.pravatar.cc/100"} className="w-12 h-12 rounded-xl object-cover" alt="" />
+                                                <div key={i} className="flex items-center gap-3 p-2 bg-slate-50 border border-slate-100 rounded-xl pr-4">
+                                                    <img src={w.image || "https://i.pravatar.cc/100"} className="w-10 h-10 rounded-lg object-cover" alt="" />
                                                     <div>
-                                                        <p className="text-sm font-black text-slate-800 leading-tight">{w.name}</p>
-                                                        <p className="text-[9px] font-black text-blue-500 uppercase tracking-widest">{w.workerType || 'Technical Staff'}</p>
+                                                        <p className="text-xs font-black text-slate-800 leading-tight">{w.name}</p>
+                                                        <p className="text-[8px] font-black text-blue-500 uppercase tracking-widest">{w.workerType || 'Technical Staff'}</p>
                                                     </div>
                                                 </div>
                                             ))}
                                         </div>
                                     </div>
 
-                                    <div className="bg-red-50 p-8 rounded-3xl border border-red-100 mb-12">
-                                        <div className="flex items-center gap-4 mb-4">
-                                            <ShieldAlert size={32} className="text-red-500" />
-                                            <h4 className="text-xl font-black text-red-600 uppercase tracking-tighter">Emergency Protocol Required</h4>
-                                        </div>
-                                        <div className="grid grid-cols-2 gap-8">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm"><Phone className="text-red-500" size={18} /></div>
-                                                <div>
-                                                    <p className="text-[9px] font-black text-red-300 uppercase tracking-widest">SOS Number</p>
-                                                    <p className="text-sm font-black text-slate-700">{selectedPermit.emergencyContact || '108'}</p>
-                                                </div>
+                                    <div className="bg-red-50 p-6 rounded-2xl border border-red-100 flex items-center justify-between gap-6">
+                                        <div className="flex items-center gap-4">
+                                            <ShieldAlert size={28} className="text-red-500" />
+                                            <div>
+                                                <h4 className="text-sm font-black text-red-600 uppercase tracking-tight">Emergency Protocol</h4>
+                                                <p className="text-[11px] font-bold text-red-400">Response coordinates active</p>
                                             </div>
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm"><MapPin className="text-red-500" size={18} /></div>
-                                                <div>
-                                                    <p className="text-[9px] font-black text-red-300 uppercase tracking-widest">Medical Point</p>
-                                                    <p className="text-sm font-black text-slate-700">{selectedPermit.emergencyPoint || 'Zone A Infirmary'}</p>
-                                                </div>
+                                        </div>
+                                        <div className="flex gap-6">
+                                            <div className="text-right">
+                                                <p className="text-[9px] font-black text-red-300 uppercase tracking-widest">SOS Number</p>
+                                                <p className="text-xs font-black text-slate-700">{selectedPermit.emergencyContact || '108'}</p>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="text-[9px] font-black text-red-300 uppercase tracking-widest">Infirmary</p>
+                                                <p className="text-xs font-black text-slate-700">{selectedPermit.emergencyPoint || 'Sector A'}</p>
                                             </div>
                                         </div>
                                     </div>
-
                                 </div>
 
-                                {/* 🚀 ACTIONS FOOTER */}
-                                <div className="bg-white p-8 border-t border-slate-100 flex gap-4 px-12">
+                                <div className="wp-modal-footer">
                                     <button 
                                         onClick={() => handleAction(selectedPermit._id, 'Rejected')}
-                                        className="flex-1 py-5 rounded-[1.8rem] bg-slate-50 hover:bg-red-50 text-slate-400 hover:text-red-500 font-black uppercase tracking-[0.2em] transition-all border border-slate-100 flex items-center justify-center gap-3"
+                                        className="wp-modal-btn wp-modal-btn-reject"
                                     >
-                                        <XCircle size={24} /> Deny Entry
+                                        <XCircle size={18} /> Deny Entry
                                     </button>
                                     <button 
                                         onClick={() => handleAction(selectedPermit._id, 'Approved')}
-                                        className="flex-[2] py-5 rounded-[1.8rem] bg-blue-600 hover:bg-blue-700 text-white font-black uppercase tracking-[0.2em] transition-all shadow-xl shadow-blue-100 flex items-center justify-center gap-3"
+                                        className="wp-modal-btn wp-modal-btn-approve"
                                     >
-                                        <CheckCircle2 size={24} /> Authorize Permit
+                                        <CheckCircle2 size={18} /> Authorize Permit
                                     </button>
                                 </div>
                             </motion.div>
