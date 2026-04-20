@@ -7,10 +7,9 @@ import SearchableSelection from './SearchableSelection';
 const WORK_TYPES = ["Hot Work", "Cold Work", "Confined Space", "Height Work", "Electrical", "Excavation", "Radiography"];
 const PLANTS = ["Main Factory", "Chemical Plant B", "Warehouse 4", "Unit 7 Refinery"];
 const HAZARDS = [
-  { id: "fire", label: "Fire / Explosion", icon: "local_fire_department" },
-  { id: "elec", label: "Electrical Shock", icon: "bolt" },
-  { id: "fall", label: "Fall from Height", icon: "height" },
-  { id: "gas", label: "Toxic Gas", icon: "masks" },
+  { id: "fire", label: "Fire / Explosion" },
+  { id: "fall", label: "Fall from Height" },
+  { id: "gas", label: "Toxic Gas" },
 ];
 const PPE_LIST = ["Helmet", "Gloves", "Safety Shoes", "Goggles", "Harness", "Ear Protection"];
 const SUPERVISORS = ["Rajesh Sharma", "Suresh Gupta", "Vikram Singh", "Praveen Kumar"];
@@ -101,7 +100,62 @@ const WorkPermitPage = () => {
 
   const handleAutoFill = () => {
     switch (activeStep) {
-      // ... (AutoFill logic)
+      case 1:
+        setForm(prev => ({
+          ...prev,
+          title: "Boiler B-04 Annual Maintenance & Pressure Test",
+          workType: "Hot Work",
+          riskLevel: "High",
+          description: "Comprehensive inspection of boiler internal tubes, pressure testing up to 15 bar, and replacement of safety valve gaskets."
+        }));
+        break;
+      case 2:
+        setForm(prev => ({
+          ...prev,
+          plant: "Refinery Alpha - Unit 4",
+          area: "Technical Wing",
+          exactLocation: "Boiler Room #4, 2nd Floor Mezzanine",
+          startTime: new Date().toISOString().slice(0, 16),
+          endTime: new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 16)
+        }));
+        setMapView("detail");
+        setMapPin({ x: 45, y: 55 });
+        break;
+      case 3:
+        setWorkers([
+          { name: "John Smith", id: "EMP-0492", image: "https://i.pravatar.cc/150?u=EMP-0492", workerType: "Employee", company: "PIL Internal" },
+          { name: "Michael Ross", id: "CTR-0211", image: "https://i.pravatar.cc/150?u=CTR-0211", workerType: "Contractor", company: "Alpha Engineering Services" }
+        ]);
+        break;
+      case 4:
+        setHazards(["fire", "gas", "fall"]);
+        setPpe(["Helmet", "Gloves", "Safety Shoes", "Goggles", "Harness"]);
+        setSafetyChecks({
+          gasTest: true,
+          isolated: true,
+          fireExt: true,
+          equipChecked: true,
+          ventilationCheck: true,
+          communicationSet: true,
+          lockOutTagOut: true,
+          scaffoldingReady: true
+        });
+        setForm(prev => ({
+          ...prev,
+          emergencyContact: "+91 99887-76655",
+          emergencyPoint: "Safety Station #12 (Zone B)"
+        }));
+        break;
+      case 5:
+        setForm(prev => ({
+          ...prev,
+          supervisor: "Rajesh Sharma",
+          safetyOfficer: "Amit Varma",
+          assignedApprover: "Rajesh Sharma"
+        }));
+        break;
+      default:
+        break;
     }
   };
 
@@ -163,11 +217,6 @@ const WorkPermitPage = () => {
           return false;
         }
         return true;
-      case 5:
-        // Checklist is usually optional but encouraged, 
-        // we can let them skip if they want or require all.
-        // For now, let's keep it flexible.
-        return true;
       default:
         return true;
     }
@@ -175,9 +224,7 @@ const WorkPermitPage = () => {
 
   const handleNext = () => {
     if (validateStep(activeStep)) {
-      const next = Math.min(activeStep + 1, 6);
-      // For navigation, we just change the step locally.
-      // saveStep will handle the sync.
+      const next = Math.min(activeStep + 1, 5);
       saveStep(next);
     }
   };
@@ -202,8 +249,7 @@ const WorkPermitPage = () => {
     { id: 2, label: "Location", icon: "pin_drop" },
     { id: 3, label: "Crew", icon: "engineering" },
     { id: 4, label: "Safety", icon: "security" },
-    { id: 5, label: "Checklist", icon: "verified_user" },
-    { id: 6, label: "Approval", icon: "assignment_turned_in" },
+    { id: 5, label: "Approval", icon: "assignment_turned_in" },
   ];
 
   // Filtered Permits
@@ -413,6 +459,23 @@ const WorkPermitPage = () => {
     setActiveTab("request");
     
     toast.info("Previous permit details copied. Please update the schedule and submit.");
+  };
+
+  const handleDeletePermit = async (permit) => {
+    if (window.confirm("Are you sure you want to delete this permit application?")) {
+      try {
+        const res = await API.workpermit.remove(permit._id);
+        if (res.status) {
+          toast.success("Permit deleted successfully.");
+          fetchPermits();
+        } else {
+          toast.error(res.message || "Failed to delete permit.");
+        }
+      } catch (error) {
+        console.error("Error deleting permit:", error);
+        toast.error("An error occurred while deleting the permit.");
+      }
+    }
   };
 
   const validate = () => {
@@ -651,16 +714,6 @@ const WorkPermitPage = () => {
                       <input type="datetime-local" name="endTime" value={form.endTime} onChange={handleInputChange} />
                     </div>
 
-                    <div className="wp-form-group wp-full">
-                      <label>Calculated Active Duration</label>
-                      <div className="wp-duration-card">
-                        <span className="material-symbols-rounded">schedule</span>
-                        <div>
-                          <strong>{duration === "Invalid" ? "Set Valid Range" : duration}</strong>
-                          <span>Total active work time on-site</span>
-                        </div>
-                      </div>
-                    </div>
                   </div>
                 </div>
               )}
@@ -755,14 +808,14 @@ const WorkPermitPage = () => {
                 </div>
               )}
 
-              {/* ⚠️ Step 4: Hazard & PPE */}
+              {/* ⚠️ Step 4: Safety Analysis & Readiness */}
               {activeStep === 4 && (
                 <div className="wp-section-fade-in wp-section-modern">
                   <div className="wp-section-header-simple">
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <div>
-                        <h2><span className="material-symbols-rounded">security</span> 4. Hazard Analysis & PPE</h2>
-                        <p>Identify risks and required protective equipment.</p>
+                        <h2><span className="material-symbols-rounded">security</span> 4. Safety & Readiness</h2>
+                        <p>Identify risks, PPE, and verify safety checklist.</p>
                       </div>
                       <button type="button" className="wp-autofill-btn" onClick={handleAutoFill}>
                         <span className="material-symbols-rounded">magic_button</span> Auto Fill Step
@@ -770,109 +823,103 @@ const WorkPermitPage = () => {
                     </div>
                   </div>
                   <div className="wp-risk-section">
-                    <label className="wp-sub-label">Incident & Hazard Identification</label>
-                    <div className="wp-hazard-selection-grid">
-                      {HAZARDS.map(h => (
-                        <div key={h.id} className={`wp-hazard-chip ${hazards.includes(h.id) ? 'active' : ''}`} onClick={() => {
-                          setHazards(hazards.includes(h.id) ? hazards.filter(x => x !== h.id) : [...hazards, h.id]);
-                        }}>
-                          <span className="material-symbols-rounded">{h.icon}</span>
-                          <span>{h.label}</span>
-                          {hazards.includes(h.id) && <span className="material-symbols-rounded chip-check">check_circle</span>}
+                    <div className="wp-grid" style={{ gap: '24px' }}>
+                      <SearchableSelection 
+                        label="Identify Hazards"
+                        name="hazards"
+                        value={hazards.map(id => HAZARDS.find(h => h.id === id)?.label).filter(Boolean)}
+                        multiple={true}
+                        options={HAZARDS.map(h => h.label)}
+                        onChange={(e) => {
+                          const selectedLabels = e.target.value;
+                          const selectedIds = selectedLabels.map(label => HAZARDS.find(h => h.label === label)?.id).filter(Boolean);
+                          setHazards(selectedIds);
+                        }}
+                        placeholder="Search or select hazards..."
+                      />
+
+                      <SearchableSelection 
+                        label="Required PPE"
+                        name="ppe"
+                        value={ppe}
+                        multiple={true}
+                        options={PPE_LIST}
+                        onChange={(e) => setPpe(e.target.value)}
+                        placeholder="Search or select PPE..."
+                      />
+
+                      <SearchableSelection 
+                        label="Safety Readiness Checklist"
+                        name="safetyChecks"
+                        value={Object.keys(safetyChecks)
+                          .filter(k => safetyChecks[k])
+                          .map(k => k.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase()))}
+                        multiple={true}
+                        options={Object.keys(safetyChecks).map(k => k.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase()))}
+                        onChange={(e) => {
+                          const selectedLabels = e.target.value;
+                          const newChecks = { ...safetyChecks };
+                          Object.keys(newChecks).forEach(k => {
+                            const label = k.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+                            newChecks[k] = selectedLabels.includes(label);
+                          });
+                          setSafetyChecks(newChecks);
+                        }}
+                        placeholder="Final verification items..."
+                      />
+
+                      <div className="wp-form-group">
+                        <label>Supporting Certificates (Image/PDF)</label>
+                        <div className="wp-modern-upload-box" onClick={() => fileInputRef.current?.click()}>
+                          <input type="file" style={{ display: 'none' }} ref={fileInputRef} multiple />
+                          <span className="material-symbols-rounded">cloud_upload</span>
+                          <div>
+                            <strong>Upload Documentation</strong>
+                            <span>Max 10MB per file</span>
+                          </div>
                         </div>
-                      ))}
+                      </div>
                     </div>
 
-                    <label className="wp-sub-label" style={{ marginTop: 32 }}>Required PPE Selection</label>
-                    <div className="wp-ppe-selection-grid">
-                      {PPE_LIST.map(p => (
-                        <button type="button" key={p} className={`wp-ppe-chip ${ppe.includes(p) ? 'active' : ''}`} onClick={() => {
-                          setPpe(ppe.includes(p) ? ppe.filter(x => x !== p) : [...ppe, p]);
-                        }}>
-                          {p}
-                          {ppe.includes(p) && <span className="material-symbols-rounded">check</span>}
-                        </button>
-                      ))}
+                    <div className="wp-grid" style={{ marginTop: 20 }}>
+                      {/* Emergency Action Details */}
+                      <div className="wp-form-group wp-full">
+                        <label>Emergency Action Details (Editable)</label>
+                        <div className="wp-grid sm">
+                          <div className="wp-form-group">
+                            <label><span className="material-symbols-rounded">call</span> SOS line</label>
+                            <input
+                              name="emergencyContact"
+                              value={form.emergencyContact}
+                              onChange={handleInputChange}
+                              placeholder="+91 00000-00000"
+                              className="wp-emergency-input"
+                            />
+                          </div>
+                          <div className="wp-form-group">
+                            <label><span className="material-symbols-rounded">medical_services</span> First Aid Point</label>
+                            <input
+                              name="emergencyPoint"
+                              value={form.emergencyPoint}
+                              onChange={handleInputChange}
+                              placeholder="e.g. Area B Station"
+                              className="wp-emergency-input"
+                            />
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
               )}
 
-              {/* 🛡️ Step 5: Checklist & Emergency */}
+              {/* ✅ Step 5: Approval Workflow */}
               {activeStep === 5 && (
                 <div className="wp-section-fade-in wp-section-modern">
                   <div className="wp-section-header-simple">
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <div>
-                        <h2><span className="material-symbols-rounded">verified_user</span> 5. Safety Checklist & Emergency</h2>
-                        <p>Final safety verification and response details.</p>
-                      </div>
-                      <button type="button" className="wp-autofill-btn" onClick={handleAutoFill}>
-                        <span className="material-symbols-rounded">magic_button</span> Auto Fill Step
-                      </button>
-                    </div>
-                  </div>
-                  <div className="wp-grid">
-                    <div className="wp-form-group wp-full">
-                      <label>Safety Readiness Checklist</label>
-                      <div className="wp-checklist-grid">
-                        {Object.keys(safetyChecks).map(key => (
-                          <div key={key} className={`wp-check-row ${safetyChecks[key] ? 'checked' : ''}`} onClick={() => setSafetyChecks(prev => ({ ...prev, [key]: !prev[key] }))}>
-                            <span className="material-symbols-rounded">{safetyChecks[key] ? 'check_circle' : 'circle'}</span>
-                            <span>{key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="wp-form-group">
-                      <label>Supporting Certificates (Image/PDF)</label>
-                      <div className="wp-modern-upload-box" onClick={() => fileInputRef.current?.click()}>
-                        <input type="file" style={{ display: 'none' }} ref={fileInputRef} multiple />
-                        <span className="material-symbols-rounded">cloud_upload</span>
-                        <div>
-                          <strong>Upload Documentation</strong>
-                          <span>Max 10MB per file</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="wp-form-group wp-full">
-                      <label>Emergency Action Details (Editable)</label>
-                      <div className="wp-grid sm">
-                        <div className="wp-form-group">
-                          <label><span className="material-symbols-rounded">call</span> SOS line</label>
-                          <input
-                            name="emergencyContact"
-                            value={form.emergencyContact}
-                            onChange={handleInputChange}
-                            placeholder="+91 00000-00000"
-                            className="wp-emergency-input"
-                          />
-                        </div>
-                        <div className="wp-form-group">
-                          <label><span className="material-symbols-rounded">medical_services</span> First Aid Point</label>
-                          <input
-                            name="emergencyPoint"
-                            value={form.emergencyPoint}
-                            onChange={handleInputChange}
-                            placeholder="e.g. Area B Station"
-                            className="wp-emergency-input"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* ✅ Step 6: Approval Workflow */}
-              {activeStep === 6 && (
-                <div className="wp-section-fade-in wp-section-modern">
-                  <div className="wp-section-header-simple">
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div>
-                        <h2><span className="material-symbols-rounded">assignment_turned_in</span> 6. Approval Workflow</h2>
+                        <h2><span className="material-symbols-rounded">assignment_turned_in</span> 5. Approval Workflow</h2>
                         <p>Finalize the permit and send for authorization.</p>
                       </div>
                       <button type="button" className="wp-autofill-btn" onClick={handleAutoFill}>
@@ -880,7 +927,7 @@ const WorkPermitPage = () => {
                       </button>
                     </div>
                   </div>
-                  <div className="wp-grid">
+                  <div className="wp-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
                     <SearchableSelection 
                       label="Line Supervisor (Issuer)"
                       name="supervisor"
@@ -897,23 +944,13 @@ const WorkPermitPage = () => {
                       onChange={handleInputChange}
                     />
 
-                    <div className="wp-form-group wp-full">
-                      <SearchableSelection 
-                        label="Assigned Approver (Final Auth)"
-                        name="assignedApprover"
-                        value={form.assignedApprover}
-                        options={dynamicOptions.assignedApprover}
-                        onChange={handleInputChange}
-                      />
-                    </div>
-                    <div className="wp-form-group">
-                      <label>Authorized Emergency Contact</label>
-                      <input name="emergencyContact" value={form.emergencyContact} onChange={handleInputChange} />
-                    </div>
-                    <div className="wp-form-group">
-                      <label>Nearest Safety Station</label>
-                      <input name="emergencyPoint" value={form.emergencyPoint} onChange={handleInputChange} />
-                    </div>
+                    <SearchableSelection 
+                      label="Assigned Approver (Final Auth)"
+                      name="assignedApprover"
+                      value={form.assignedApprover}
+                      options={dynamicOptions.assignedApprover}
+                      onChange={handleInputChange}
+                    />
                   </div>
                   <div className="wp-declaration-box">
                     <span className="material-symbols-rounded">info</span>
@@ -928,7 +965,7 @@ const WorkPermitPage = () => {
                   <span className="material-symbols-rounded">arrow_back</span> Previous
                 </button>
 
-                {activeStep < 6 ? (
+                {activeStep < 5 ? (
                   <button type="button" className="wp-nav-btn wp-next" onClick={handleNext}>
                     Next Step <span className="material-symbols-rounded">arrow_forward</span>
                   </button>
@@ -1007,20 +1044,17 @@ const WorkPermitPage = () => {
                       </td>
                       <td><span className="wp-history-type">{p.workType}</span></td>
                       <td style={{ whiteSpace: 'nowrap' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--wp-primary)', fontWeight: '700', fontSize: '13px' }}>
-                          <span className="material-symbols-rounded" style={{ fontSize: '18px', color: 'var(--wp-accent)', flexShrink: 0 }}>factory</span>
+                        <div style={{ color: 'var(--wp-primary)', fontWeight: '700', fontSize: '13px' }}>
                           <span style={{ whiteSpace: 'nowrap' }}>{p.plant || "Refinery Alpha"}</span>
                         </div>
                       </td>
                       <td style={{ whiteSpace: 'nowrap' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', fontWeight: '800', color: 'var(--wp-primary)' }}>
                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}>
-                              <span className="material-symbols-rounded" style={{ fontSize: '16px', color: 'var(--wp-success)', flexShrink: 0 }}>radio_button_checked</span>
                               {new Date(p.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                            </div>
-                           <span className="material-symbols-rounded" style={{ fontSize: '16px', color: '#94a3b8', flexShrink: 0 }}>arrow_right_alt</span>
+                           <span style={{ color: '#94a3b8' }}>→</span>
                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--wp-secondary-light)', opacity: 0.8, whiteSpace: 'nowrap' }}>
-                              <span className="material-symbols-rounded" style={{ fontSize: '16px', flexShrink: 0 }}>history</span>
                               {new Date(p.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                            </div>
                         </div>
@@ -1033,29 +1067,25 @@ const WorkPermitPage = () => {
                       <td>
                         <div className="wp-table-safety-group">
                           <span className={`wp-risk-tag wp-risk-${(p.riskLevel || 'Low').toLowerCase()}`}>{p.riskLevel || 'Low'} Risk</span>
-                          <div className="wp-table-hazard-icons">
-                            {p.hazards?.map(h => (
-                              <span key={h} className="material-symbols-rounded" title={h}>
-                                {HAZARDS.find(hx => hx.id === h)?.icon || 'warning'}
-                              </span>
-                            ))}
-                          </div>
                         </div>
                       </td>
                       <td>
                         <div className="wp-table-actions">
-                          {p.status !== 'Approved' && (
-                            <button className="wp-action-btn wp-refill-btn" title="Re-apply / Copy Details" onClick={() => handleRefillPermit(p)}>
-                              <span className="material-symbols-rounded">history_edu</span>
-                            </button>
-                          )}
                           {p.status === 'Approved' ? (
-                            <button className="wp-action-btn wp-chat-btn" onClick={() => { setActiveChatId(p.permitId); setIsChatOpen(true); }}>
+                            <button className="wp-action-btn wp-chat-btn" title="Chat with team" onClick={() => { setActiveChatId(p.permitId); setIsChatOpen(true); }}>
                               <span className="material-symbols-rounded">chat_bubble</span>
                             </button>
                           ) : (
-                            <button className="wp-action-btn wp-edit-btn" onClick={() => handleEditPermit(p)}>
+                            <button className="wp-action-btn wp-edit-btn" title="Edit Permit" onClick={() => handleEditPermit(p)}>
                               <span className="material-symbols-rounded">edit_square</span>
+                            </button>
+                          )}
+                          <button className="wp-action-btn wp-delete-btn" title="Delete Permit" onClick={() => handleDeletePermit(p)}>
+                            <span className="material-symbols-rounded">delete</span>
+                          </button>
+                          {p.status !== 'Approved' && (
+                            <button className="wp-action-btn wp-refill-btn" title="Re-apply / Copy Details" onClick={() => handleRefillPermit(p)}>
+                              <span className="material-symbols-rounded">history_edu</span>
                             </button>
                           )}
                         </div>

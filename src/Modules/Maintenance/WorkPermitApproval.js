@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { 
   CheckCircle2, XCircle, Clock, Eye, 
   Shield, MapPin, HardHat, Phone,
-  AlertTriangle, ArrowRight, Filter, Search,
+  AlertTriangle, ArrowRight, Filter,
   Menu, MoreVertical, LayoutGrid, List,
   Calendar, UserCheck, ShieldAlert,
   ChevronRight, RotateCcw, Layers
@@ -77,52 +77,47 @@ const WorkPermitApproval = () => {
             <div className="wp-container wp-full-width">
                 
                 {/* 🏰 HEADER SECTION */}
-                <header className="wp-header-modern" style={{ marginBottom: '30px' }}>
-                    <div className="wp-header-left">
-                        <div className="wp-header-icon-box">
-                            <UserCheck className="text-blue-600" size={28} />
+                <header className="wp-approval-header">
+                    <div className="wp-approval-title-section">
+                        <div className="wp-approval-icon-bg">
+                            <UserCheck size={28} />
                         </div>
                         <div>
-                            <h1 style={{ fontSize: '28px', fontWeight: 900, letterSpacing: '-1px' }}>Permit Authorization</h1>
-                            <p style={{ color: '#64748b', fontSize: '14px', fontWeight: 600 }}>Review and validate operational safety permits.</p>
+                            <h1>Permit Authorization</h1>
+                            <p>Review and validate operational safety permits.</p>
                         </div>
                     </div>
 
-                    <div className="flex gap-4">
+                    <div className="wp-approval-stats">
                          <div 
-                            className={`p-4 rounded-2xl shadow-sm border flex items-center gap-4 px-8 cursor-pointer transition-all ${filterStatus === 'Pending' ? 'bg-orange-50 border-orange-200 shadow-md' : 'bg-white border-slate-100'}`}
+                            className={`wp-stat-card ${filterStatus === 'Pending' ? 'active pending' : ''}`}
                             onClick={() => setFilterStatus('Pending')}
                          >
-                             <div className="w-10 h-10 bg-orange-100/50 rounded-xl flex items-center justify-center text-orange-600 font-black">
-                                {stats.pending}
-                             </div>
-                             <div>
-                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Queue</p>
-                                <p className="text-sm font-black text-slate-700">Pending</p>
+                             <div className="wp-stat-number">{stats.pending}</div>
+                             <div className="wp-stat-info">
+                                <span className="wp-stat-label">Queue</span>
+                                <span className="wp-stat-name">Pending</span>
                              </div>
                          </div>
                          <div 
-                            className={`p-4 rounded-2xl shadow-sm border flex items-center gap-4 px-8 cursor-pointer transition-all ${filterStatus === 'Approved' ? 'bg-emerald-50 border-emerald-200 shadow-md' : 'bg-white border-slate-100'}`}
+                            className={`wp-stat-card ${filterStatus === 'Approved' ? 'active approved' : ''}`}
                             onClick={() => setFilterStatus('Approved')}
                          >
-                             <div className="w-10 h-10 bg-emerald-100/50 rounded-xl flex items-center justify-center text-emerald-600 font-black">
-                                {stats.approved}
-                             </div>
-                             <div>
-                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Cleared</p>
-                                <p className="text-sm font-black text-slate-700">Approved</p>
+                             <div className="wp-stat-number">{stats.approved}</div>
+                             <div className="wp-stat-info">
+                                <span className="wp-stat-label">Cleared</span>
+                                <span className="wp-stat-name">Approved</span>
                              </div>
                          </div>
                     </div>
                 </header>
 
-                {/* 🔍 FILTER BAR */}
-                <div className="wp-filter-bar" style={{ marginBottom: '24px', background: 'white', padding: '12px 24px', borderRadius: '20px', boxShadow: '0 4px 12px rgba(0,0,0,0.03)' }}>
-                    <div className="wp-search-box flex-1">
-                        <Search size={18} className="text-slate-400" />
+                <div className="wp-filter-bar">
+                    <div className="wp-search-box" style={{ maxWidth: 'none' }}>
+                        <span className="material-symbols-rounded">search</span>
                         <input 
                             className="wp-search-input" 
-                            placeholder="Search Pending Permits by ID or Title..." 
+                            placeholder="Search pending permits by ID or title..." 
                             value={searchTerm}
                             onChange={e => setSearchTerm(e.target.value)}
                         />
@@ -145,54 +140,52 @@ const WorkPermitApproval = () => {
                                     animate={{ opacity: 1, y: 0 }}
                                     exit={{ opacity: 0, scale: 0.95 }}
                                     key={p._id}
-                                    className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-xl transition-all cursor-pointer group"
+                                    className={`wp-permit-card-modern group ${p.riskLevel?.toLowerCase() || 'low'}`}
                                     onClick={() => setSelectedPermit(p)}
                                 >
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-8 flex-1">
-                                            <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center font-mono font-black text-slate-300 text-xl tracking-tighter">
+                                    <div className="wp-card-accent-bar" />
+                                    <div className="wp-permit-card-main">
+                                        <div className="wp-permit-card-left">
+                                            <div className="wp-permit-card-index">
                                                 {(idx + 1).toString().padStart(2, '0')}
                                             </div>
                                             
-                                            <div className="flex-1">
-                                                <div className="flex items-center gap-3 mb-1">
-                                                    <span className="bg-blue-50 text-blue-600 px-3 py-1 rounded-lg font-mono font-black text-xs tracking-tighter border border-blue-100">
-                                                        #{p.permitId}
-                                                    </span>
-                                                    <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border-2
-                                                        ${p.riskLevel === 'High' ? 'text-red-500 border-red-100 bg-red-50' : 'text-emerald-500 border-emerald-100 bg-emerald-50'}`}>
+                                            <div className="wp-permit-card-content">
+                                                <div className="wp-permit-card-badges">
+                                                    <span className="wp-permit-id-tag">#{p.permitId}</span>
+                                                    <span className={`wp-risk-tag ${p.riskLevel?.toLowerCase() === 'high' ? 'high' : 'low'}`}>
                                                         {p.riskLevel} Risk
                                                     </span>
                                                 </div>
-                                                <h3 className="text-xl font-black text-slate-800 tracking-tight group-hover:text-blue-600 transition-colors uppercase">
+                                                <h3 className="wp-permit-card-title">
                                                     {p.title}
                                                 </h3>
-                                                <div className="flex items-center gap-6 mt-3">
-                                                     <div className="flex items-center gap-2 text-slate-400">
-                                                        <MapPin size={14} className="text-blue-400" />
-                                                        <span className="text-[12px] font-bold">{p.plant} • {p.area}</span>
+                                                <div className="wp-permit-card-meta">
+                                                     <div className="wp-meta-item">
+                                                        <span className="wp-meta-label">Location</span>
+                                                        <span className="wp-meta-val">{p.plant} • {p.area}</span>
                                                      </div>
-                                                     <div className="flex items-center gap-2 text-slate-400">
-                                                        <Clock size={14} className="text-blue-400" />
-                                                        <span className="text-[12px] font-bold">{new Date(p.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} — {new Date(p.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                                     <div className="wp-meta-item">
+                                                        <span className="wp-meta-label">Timeframe</span>
+                                                        <span className="wp-meta-val">{new Date(p.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} — {new Date(p.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                                                      </div>
-                                                     <div className="flex items-center gap-2 text-slate-400">
-                                                        <HardHat size={14} className="text-blue-400" />
-                                                        <span className="text-[12px] font-bold">Crew: {p.workers?.length || 0}</span>
+                                                     <div className="wp-meta-item">
+                                                        <span className="wp-meta-label">Crew</span>
+                                                        <span className="wp-meta-val">{p.workers?.length || 0} Members</span>
                                                      </div>
                                                 </div>
                                             </div>
                                         </div>
 
-                                        <div className="flex items-center gap-6">
-                                            <div className="text-right">
-                                                <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-1">Permit Status</p>
-                                                <div className="flex items-center gap-2">
-                                                    <div className={`w-2.5 h-2.5 rounded-full ${p.status === 'Approved' ? 'bg-emerald-500 shadow-emerald-200' : 'bg-orange-400 shadow-orange-100'}`} />
-                                                    <span className="font-black text-sm uppercase tracking-wider text-slate-700">{p.status}</span>
+                                        <div className="wp-permit-card-actions">
+                                            <div className="wp-permit-status-box">
+                                                <p className="wp-status-label">Permit Status</p>
+                                                <div className="wp-status-indicator-row">
+                                                    <div className={`wp-status-dot ${p.status === 'Approved' ? 'approved' : 'pending'}`} />
+                                                    <span className="wp-status-text">{p.status}</span>
                                                 </div>
                                             </div>
-                                            <div className="p-3 bg-slate-50 text-slate-400 rounded-2xl group-hover:bg-blue-600 group-hover:text-white transition-all shadow-sm">
+                                            <div className="wp-permit-card-chevron">
                                                 <ChevronRight size={24} />
                                             </div>
                                         </div>
@@ -206,19 +199,24 @@ const WorkPermitApproval = () => {
                 {/* 🛡️ PERMIT DETAIL SIDEBAR / OVERLAY */}
                 <AnimatePresence>
                     {selectedPermit && (
-                        <div className="fixed inset-0 z-[100] flex justify-end">
+                        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-10">
                             <motion.div 
-                                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                                initial={{ opacity: 0 }} 
+                                animate={{ opacity: 1 }} 
+                                exit={{ opacity: 0 }}
                                 onClick={() => setSelectedPermit(null)}
-                                className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
+                                className="absolute inset-0 bg-slate-900/60 backdrop-blur-md"
                             />
                             <motion.div 
-                                initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                                className="relative w-full max-w-[800px] bg-white h-screen shadow-2xl flex flex-col pt-10"
+                                initial={{ opacity: 0, scale: 0.9, y: 20 }} 
+                                animate={{ opacity: 1, scale: 1, y: 0 }} 
+                                exit={{ opacity: 0, scale: 0.9, y: 20 }} 
+                                transition={{ type: "spring", damping: 25, stiffness: 300 }}
+                                className="relative w-full max-w-[900px] max-h-[90vh] bg-white rounded-[3rem] shadow-2xl flex flex-col overflow-hidden"
                             >
-                                <div className="absolute top-10 right-10 z-10">
-                                    <button onClick={() => setSelectedPermit(null)} className="p-3 bg-slate-50 hover:bg-red-50 hover:text-red-500 rounded-2xl transition-all">
-                                        <XCircle size={28} />
+                                <div className="absolute top-8 right-8 z-10">
+                                    <button onClick={() => setSelectedPermit(null)} className="p-2 hover:bg-red-50 hover:text-red-500 text-slate-300 rounded-full transition-all">
+                                        <XCircle size={32} />
                                     </button>
                                 </div>
 
@@ -311,16 +309,16 @@ const WorkPermitApproval = () => {
                                 </div>
 
                                 {/* 🚀 ACTIONS FOOTER */}
-                                <div className="absolute bottom-0 left-0 right-0 bg-white p-8 border-t border-slate-100 flex gap-4 px-12 shadow-[0_-20px_40px_rgba(0,0,0,0.03)]">
+                                <div className="bg-white p-8 border-t border-slate-100 flex gap-4 px-12">
                                     <button 
                                         onClick={() => handleAction(selectedPermit._id, 'Rejected')}
-                                        className="flex-1 py-5 rounded-[1.5rem] bg-slate-50 hover:bg-red-50 text-slate-400 hover:text-red-500 font-black uppercase tracking-[0.2em] transition-all border border-slate-100 flex items-center justify-center gap-3"
+                                        className="flex-1 py-5 rounded-[1.8rem] bg-slate-50 hover:bg-red-50 text-slate-400 hover:text-red-500 font-black uppercase tracking-[0.2em] transition-all border border-slate-100 flex items-center justify-center gap-3"
                                     >
                                         <XCircle size={24} /> Deny Entry
                                     </button>
                                     <button 
                                         onClick={() => handleAction(selectedPermit._id, 'Approved')}
-                                        className="flex-[2] py-5 rounded-[1.5rem] bg-blue-600 hover:bg-blue-700 text-white font-black uppercase tracking-[0.2em] transition-all shadow-xl shadow-blue-100 flex items-center justify-center gap-3"
+                                        className="flex-[2] py-5 rounded-[1.8rem] bg-blue-600 hover:bg-blue-700 text-white font-black uppercase tracking-[0.2em] transition-all shadow-xl shadow-blue-100 flex items-center justify-center gap-3"
                                     >
                                         <CheckCircle2 size={24} /> Authorize Permit
                                     </button>
